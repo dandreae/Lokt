@@ -13,7 +13,6 @@ function rowToTask(row: any): Task {
   };
 }
 
-// Fetch all tasks for the logged-in user, in the order they were created.
 export async function getTasks(): Promise<Task[]> {
   const userId = await getUserId();
   if (!userId) {
@@ -56,8 +55,6 @@ export async function createTask(task: Task): Promise<void> {
   }
 }
 
-// Update specific fields on an existing task.
-// We only send fields that were actually changed (the patch object).
 export async function updateTask(id: string, patch: Partial<Task>): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
@@ -74,7 +71,6 @@ export async function updateTask(id: string, patch: Partial<Task>): Promise<void
     .eq('user_id', userId);
 }
 
-// Delete a task by ID.
 export async function deleteTask(id: string): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
@@ -86,9 +82,7 @@ export async function deleteTask(id: string): Promise<void> {
     .eq('user_id', userId);
 }
 
-// Find a task in an already-loaded list by ID.
-// Returns a fallback "Unknown" task if not found, so the UI never crashes
-// when a session references a task that was deleted.
+// Returns a fallback if the task was deleted, so the UI never crashes on stale session data.
 export function lookupTask(tasks: Task[], id: string): Task {
   return tasks.find((t) => t.id === id) ?? { id, label: 'Unknown', color: '#9898b8' };
 }

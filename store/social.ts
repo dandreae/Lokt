@@ -1,7 +1,5 @@
 import { supabase, getUserId } from '../utils/supabase';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export type LeaderboardEntry = {
   user_id: string;
   display_name: string;
@@ -35,10 +33,6 @@ export type SearchResult = {
   username: string | null;
 };
 
-// ─── Leaderboard ──────────────────────────────────────────────────────────────
-
-// Calls the database function we created in SQL.
-// Returns you + all accepted friends sorted by weekly study time.
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const userId = await getUserId();
   if (!userId) return [];
@@ -56,10 +50,7 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   }));
 }
 
-// ─── Friend requests ──────────────────────────────────────────────────────────
-
-// Search for users by username or display name.
-// The % symbols make it a "contains" search, not exact match.
+// The % wildcards make this a contains search, not a prefix match.
 export async function searchUsers(query: string): Promise<SearchResult[]> {
   const userId = await getUserId();
   if (!userId || !query.trim()) return [];
@@ -75,8 +66,6 @@ export async function searchUsers(query: string): Promise<SearchResult[]> {
   return data ?? [];
 }
 
-// Send a friend request to another user.
-// Returns a message so the UI can show feedback.
 export async function sendFriendRequest(addresseeId: string): Promise<{ success: boolean; message: string }> {
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Not logged in.' };
@@ -95,7 +84,6 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ success:
   return { success: true, message: 'Request sent!' };
 }
 
-// Get all incoming friend requests that are still pending.
 export async function getPendingRequests(): Promise<PendingRequest[]> {
   const userId = await getUserId();
   if (!userId) return [];
@@ -125,7 +113,6 @@ export async function getPendingRequests(): Promise<PendingRequest[]> {
   }));
 }
 
-// Accept or decline a friend request.
 export async function respondToRequest(friendshipId: string, accept: boolean): Promise<void> {
   const { error } = await supabase
     .from('friendships')
@@ -135,10 +122,6 @@ export async function respondToRequest(friendshipId: string, accept: boolean): P
   if (error) console.error('respondToRequest error:', error.message);
 }
 
-// ─── Presence ─────────────────────────────────────────────────────────────────
-
-// Update whether you are currently studying.
-// Called when a session starts and when it ends.
 export async function updatePresence(isStudying: boolean, taskId?: string | null): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
@@ -150,8 +133,6 @@ export async function updatePresence(isStudying: boolean, taskId?: string | null
     updated_at: new Date().toISOString(),
   });
 }
-
-// ─── Profile ──────────────────────────────────────────────────────────────────
 
 export async function getMyProfile(): Promise<UserProfile | null> {
   const userId = await getUserId();
@@ -166,7 +147,6 @@ export async function getMyProfile(): Promise<UserProfile | null> {
   return data ?? null;
 }
 
-// Update the current user's display name.
 export async function updateDisplayName(name: string): Promise<{ success: boolean; message: string }> {
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Not logged in.' };
@@ -183,9 +163,6 @@ export async function updateDisplayName(name: string): Promise<{ success: boolea
   return { success: true, message: 'Name updated!' };
 }
 
-// ─── School ───────────────────────────────────────────────────────────────────
-
-// Search for schools by name. Used in the join school flow.
 export async function searchSchools(query: string): Promise<School[]> {
   if (!query.trim()) return [];
   const { data, error } = await supabase
@@ -197,7 +174,6 @@ export async function searchSchools(query: string): Promise<School[]> {
   return data ?? [];
 }
 
-// Get the current user's school, or null if they haven't joined one.
 export async function getMySchool(): Promise<School | null> {
   const userId = await getUserId();
   if (!userId) return null;
@@ -212,39 +188,18 @@ export async function getMySchool(): Promise<School | null> {
   return { id: s.id, name: s.name, domain: s.domain ?? '' };
 }
 
-// Join an existing school by ID.
 export async function joinSchool(schoolId: string): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
   await supabase.from('profiles').update({ school_id: schoolId }).eq('id', userId);
 }
 
-// Create a new school and immediately join it.
-// Used when a user's school isn't in the database yet.
-export async function createAndJoinSchool(name: string): Promise<{ success: boolean; message: string }> {
-  const userId = await getUserId();
-  if (!userId) return { success: false, message: 'Not logged in.' };
-
-  const { data, error } = await supabase
-    .from('schools')
-    .insert({ name: name.trim() })
-    .select()
-    .single();
-
-  if (error) return { success: false, message: error.message };
-
-  await supabase.from('profiles').update({ school_id: data.id }).eq('id', userId);
-  return { success: true, message: 'Joined!' };
-}
-
-// Leave the current school.
 export async function leaveSchool(): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
   await supabase.from('profiles').update({ school_id: null }).eq('id', userId);
 }
 
-// Get the school leaderboard — all users at the same school sorted by weekly time.
 export async function getSchoolLeaderboard(): Promise<LeaderboardEntry[]> {
   const userId = await getUserId();
   if (!userId) return [];
@@ -257,12 +212,8 @@ export async function getSchoolLeaderboard(): Promise<LeaderboardEntry[]> {
   }));
 }
 
-// ─── Username ─────────────────────────────────────────────────────────────────
-
-// ─── School email verification ────────────────────────────────────────────────
-
-// If the user's primary email domain matches a school, auto-join them.
-// Used as a fallback for existing users who signed up before the trigger.
+// Checks the user's primary email domain against the schools table and auto-joins
+// if there's a match. Fallback for users who signed up before the DB trigger existed.
 export async function checkAndAutoJoinSchool(): Promise<School | null> {
   const userId = await getUserId();
   if (!userId) return null;
@@ -286,7 +237,6 @@ export async function checkAndAutoJoinSchool(): Promise<School | null> {
   return { id: school.id, name: school.name, domain: school.domain };
 }
 
-// Send a 6-digit OTP to the given school email address.
 export async function sendSchoolVerificationOtp(schoolEmail: string): Promise<{ success: boolean; message: string }> {
   const { error } = await supabase.auth.signInWithOtp({
     email: schoolEmail.trim().toLowerCase(),
@@ -296,8 +246,10 @@ export async function sendSchoolVerificationOtp(schoolEmail: string): Promise<{ 
   return { success: true, message: 'Code sent!' };
 }
 
-// Verify the OTP for a school email and join the school on behalf of the original user.
-// Saves the original session, switches to the OTP session to call the RPC, then restores.
+// Verifies a school email OTP on behalf of the currently logged-in user.
+// Flow: save original session tokens → verify OTP (replaces active session) →
+// call RPC to update original user's school_id → restore original session.
+// The school email is never stored; it is only used for domain verification.
 export async function verifySchoolOtpAndJoin(
   schoolEmail: string,
   token: string,
@@ -332,10 +284,7 @@ export async function verifySchoolOtpAndJoin(
   return { success: true, message: 'Joined!' };
 }
 
-// ─── Username ─────────────────────────────────────────────────────────────────
-
-// Set or update the current user's username.
-// Usernames must be unique — Supabase will reject duplicates.
+// Usernames must be unique across all profiles — the DB enforces this with a unique constraint.
 export async function updateUsername(username: string): Promise<{ success: boolean; message: string }> {
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Not logged in.' };

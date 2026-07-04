@@ -16,7 +16,6 @@ function rowToSession(row: any): Session {
   };
 }
 
-// Fetch all sessions for the logged-in user, newest first.
 export async function getSessions(): Promise<Session[]> {
   const userId = await getUserId();
   if (!userId) return [];
@@ -31,9 +30,8 @@ export async function getSessions(): Promise<Session[]> {
   return data.map(rowToSession);
 }
 
-// Save a new session to the database.
-// We pass created_at explicitly so it reflects when the session actually
-// happened (not when the INSERT runs, which could be slightly later).
+// created_at is passed explicitly so it reflects when the session happened,
+// not when the INSERT runs (the two can differ if the user is offline or slow).
 export async function saveSession(session: Session): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
@@ -48,9 +46,7 @@ export async function saveSession(session: Session): Promise<void> {
   });
 }
 
-// Delete a single session by its ID.
-// We always filter by user_id too — extra safety so users can't
-// delete each other's data even if something goes wrong.
+// user_id is included in the filter as a safety net alongside RLS.
 export async function deleteSession(id: string): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
@@ -62,8 +58,7 @@ export async function deleteSession(id: string): Promise<void> {
     .eq('user_id', userId);
 }
 
-// Delete all sessions belonging to a specific task.
-// Called when the user deletes a task (with the warning dialog).
+// Called before deleting a task so orphaned session records are cleaned up.
 export async function deleteSessionsByTaskId(taskId: string): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
