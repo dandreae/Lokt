@@ -30,7 +30,11 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files — .env.example is committed; everything else is not
+.env
+.env.local
+.env.development
+.env.production
 .env*.local
 
 # typescript
