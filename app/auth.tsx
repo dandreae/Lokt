@@ -11,7 +11,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from '../constants/colors';
 import { supabase } from '../utils/supabase';
@@ -97,11 +96,6 @@ export default function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <LinearGradient
-        colors={['#0b0b18', C.bg, C.bg]}
-        locations={[0, 0.4, 1]}
-        style={StyleSheet.absoluteFill}
-      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -237,12 +231,7 @@ export default function AuthScreen() {
               disabled={loading}
               style={styles.submitBtn}
             >
-              <LinearGradient
-                colors={['#8f82f9', '#6b52ea']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.submitGradient}
-              >
+              <View style={styles.submitGradient}>
                 {loading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
@@ -250,7 +239,7 @@ export default function AuthScreen() {
                     {mode === 'login' ? 'Log In' : 'Create Account'}
                   </Text>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
 
           </View>
@@ -396,7 +385,7 @@ const styles = StyleSheet.create({
   },
 
   submitBtn: {
-    borderRadius: 14,
+    borderRadius: 10,
     overflow: 'hidden',
     marginTop: 4,
   },
@@ -404,6 +393,7 @@ const styles = StyleSheet.create({
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: C.accent,
   },
   submitText: {
     fontFamily: 'Nunito-Bold',

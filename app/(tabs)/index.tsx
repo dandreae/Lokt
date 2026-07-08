@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { C } from '../../constants/colors';
 import { getSessions, getWeekSessions, getTodaySessions } from '../../store/sessions';
@@ -149,7 +148,7 @@ function WeekRing({
   progress = 0,
   color = C.accent,
   size = 164,
-  strokeWidth = 11,
+  strokeWidth = 8,
   children,
 }: {
   progress?: number;
@@ -179,24 +178,10 @@ function WeekRing({
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        {/* Outer atmospheric halo */}
-        <Circle
-          cx={size / 2} cy={size / 2} r={radius}
-          stroke={color + '10'}
-          strokeWidth={strokeWidth + 14}
-          fill="none"
-        />
-        {/* Inner soft glow ring */}
-        <Circle
-          cx={size / 2} cy={size / 2} r={radius}
-          stroke={color + '1a'}
-          strokeWidth={strokeWidth + 6}
-          fill="none"
-        />
         {/* Track */}
         <Circle
           cx={size / 2} cy={size / 2} r={radius}
-          stroke="rgba(255,255,255,0.07)"
+          stroke={color + '22'}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -505,26 +490,16 @@ export default function HomeScreen() {
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  const focusRowBg = focusMorphAnim.interpolate({ inputRange: [0, 1], outputRange: ['rgba(255,255,255,0)', 'rgba(124,111,247,0.08)'] });
+  const focusRowBg = focusMorphAnim.interpolate({ inputRange: [0, 1], outputRange: ['rgba(255,255,255,0)', 'rgba(63,175,114,0.08)'] });
   const moonDimOpacity = focusMorphAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
   const moonLitOpacity = focusMorphAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
   const ringColor = weekPct >= 100 ? C.accent2 : C.accent;
-  const heroGlowColor = weekPct >= 75 || streak >= 7 ? C.accent2 : C.accent;
 
   return (
     <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
       <SafeAreaView style={styles.safe} edges={['top']}>
 
-        {/* Ambient background */}
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <LinearGradient colors={['#0b0b18', C.bg, C.bg]} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
-          <LinearGradient
-            colors={[heroGlowColor === C.accent2 ? 'rgba(94,232,176,0.06)' : 'rgba(124,111,247,0.06)', 'transparent']}
-            start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 0.7 }}
-            style={styles.glowTop}
-          />
-        </View>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
@@ -532,25 +507,11 @@ export default function HomeScreen() {
 
           {/* ── Hero Card ──────────────────────────────────────────── */}
           <Animated.View style={[styles.heroShadowWrap, { opacity: heroAnim, shadowColor: ringColor }]}>
-            <LinearGradient
-              colors={['#1c1c32', '#131320', '#0d0d1a']}
-              locations={[0, 0.5, 1]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={styles.heroCard}
-            >
-              {/* Subtle radial accent behind ring */}
-              <LinearGradient
-                colors={[ringColor + '1a', 'transparent']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={styles.heroRadialGlow}
-                pointerEvents="none"
-              />
+            <View style={styles.heroCard}>
 
               {/* Progress Ring */}
               <Animated.View style={{ transform: [{ scale: ringBreathAnim }] }}>
-                <WeekRing progress={weekPct / 100} color={ringColor} size={164} strokeWidth={11}>
+                <WeekRing progress={weekPct / 100} color={ringColor} size={164}>
                   <View style={styles.ringCenter}>
                     <Text style={[styles.ringPctNum, { color: weekPct === 0 ? C.text3 : C.text1 }]}>
                       {weekPct}
@@ -598,7 +559,7 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-            </LinearGradient>
+            </View>
           </Animated.View>
 
           {/* ── Social Pulse ───────────────────────────────────────── */}
@@ -611,10 +572,10 @@ export default function HomeScreen() {
           {/* ── Quick Start ────────────────────────────────────────── */}
           <Animated.View style={[styles.startShadowWrap, showPanel && styles.startShadowWrapMuted, { transform: [{ scale: pulseAnim }] }]}>
             <ScalePressable onPress={handleQuickStart} scaleTo={0.97} style={styles.startBtnTouchable}>
-              <LinearGradient colors={['#8f82f9', '#6b52ea']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.startBtnGradient}>
+              <View style={styles.startBtnGradient}>
                 <Ionicons name="play-circle-outline" size={24} color="#fff" />
                 <Text style={styles.startBtnText}>Start Studying</Text>
-              </LinearGradient>
+              </View>
             </ScalePressable>
           </Animated.View>
 
@@ -739,7 +700,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-  glowTop: { position: 'absolute', left: 0, right: 0, height: 340, top: 0 },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 52 },
 
@@ -755,30 +715,24 @@ const styles = StyleSheet.create({
   // ── Hero ──────────────────────────────────────────────────────────────────
 
   heroShadowWrap: {
-    borderRadius: 24,
+    borderRadius: 16,
     marginBottom: 12,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 28,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   heroCard: {
-    borderRadius: 24,
+    borderRadius: 16,
     paddingTop: 28,
     paddingBottom: 20,
     paddingHorizontal: 20,
     alignItems: 'center',
     gap: 18,
+    backgroundColor: C.surface1,
     borderWidth: 1,
-    borderColor: 'rgba(124,111,247,0.20)',
+    borderColor: C.border,
     overflow: 'hidden',
-  },
-  heroRadialGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 220,
   },
 
   // Ring
@@ -824,10 +778,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14,
+    backgroundColor: C.surface2,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
     paddingVertical: 12,
   },
   statCell: {
@@ -838,7 +792,7 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 28,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: C.border,
   },
   statValue: {
     fontFamily: 'DMMono-Medium',
@@ -864,12 +818,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     backgroundColor: C.surface1,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: C.border,
   },
   socialAvatars: { flexDirection: 'row', alignItems: 'center' },
   socialAvatarWrap: { position: 'relative' },
@@ -903,21 +857,22 @@ const styles = StyleSheet.create({
   // ── Quick start ───────────────────────────────────────────────────────────
 
   startShadowWrap: {
-    borderRadius: 16,
+    borderRadius: 12,
     shadowColor: C.accent,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.40,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   startShadowWrapMuted: { shadowOpacity: 0, elevation: 0 },
-  startBtnTouchable: { borderRadius: 16, overflow: 'hidden' },
+  startBtnTouchable: { borderRadius: 12, overflow: 'hidden' },
   startBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    height: 56,
+    height: 54,
+    backgroundColor: C.accent,
   },
   startBtnText: { fontFamily: 'Nunito-Bold', fontSize: 16, color: '#fff' },
 
@@ -936,13 +891,13 @@ const styles = StyleSheet.create({
   // ── Options panel ─────────────────────────────────────────────────────────
 
   panel: {
-    backgroundColor: '#12121e',
-    borderRadius: 16,
+    backgroundColor: C.surface1,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 20,
     gap: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
   },
   modeRow: { flexDirection: 'row', gap: 8 },
   modeBtn: {
@@ -952,10 +907,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 5,
     height: 38,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: C.surface2,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
   },
   modeBtnActive: { backgroundColor: C.accent, borderColor: C.accent },
   modeBtnText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.text3 },
@@ -1011,14 +966,14 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  panelDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: -16 },
+  panelDivider: { height: 1, backgroundColor: C.border, marginHorizontal: -16 },
   goBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
     backgroundColor: C.accent,
-    borderRadius: 11,
+    borderRadius: 8,
     height: 44,
   },
   goBtnText: { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff' },

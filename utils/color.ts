@@ -15,7 +15,7 @@ export function darkCardBg(hex: string, active = false): string {
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
-  const br = 10, bg = 10, bb = 20; // dark base #0a0a14
+  const br = 13, bg = 17, bb = 23; // dark base matching #0D1117
   const t = active ? 0.28 : 0.20;
   return `rgb(${Math.round(r * t + br * (1 - t))},${Math.round(g * t + bg * (1 - t))},${Math.round(b * t + bb * (1 - t))})`;
 }

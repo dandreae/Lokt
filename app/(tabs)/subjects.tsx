@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { C } from '../../constants/colors';
 import { getTasks, createTask, deleteTask, TASK_COLORS } from '../../store/tasks';
 import { generateId } from '../../utils/supabase';
@@ -89,14 +88,6 @@ function TaskCard({ task, sessions, weekSessions, onPress, onDelete }: {
         }
         activeOpacity={1}
       >
-        {/* Depth gradient — light at top, dark at bottom */}
-        <LinearGradient
-          colors={['rgba(255,255,255,0.05)', 'rgba(0,0,0,0.22)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-          pointerEvents="none"
-        />
 
         {/* Left color accent bar */}
         <View style={[styles.accentBar, { backgroundColor: task.color }]} />

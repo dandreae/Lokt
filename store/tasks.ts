@@ -112,6 +112,6 @@ export async function ensureOverallTask(): Promise<Task> {
 }
 
 export const TASK_COLORS = [
-  '#7c6ff7', '#6cb4f7', '#5ee8b0', '#f7a76c',
+  '#3FAF72', '#6cb4f7', '#7c6ff7', '#f7a76c',
   '#f7d96c', '#f76cbf', '#f76c6c', '#5ee8e8', '#9898b8',
 ];
