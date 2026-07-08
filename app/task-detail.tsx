@@ -299,8 +299,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerCenter: { flex: 1 },
-  headerTitle: { fontFamily: 'Nunito-Bold', fontSize: 18 },
-  headerSub: { fontFamily: 'Nunito-Regular', fontSize: 12, marginTop: 2 },
+  headerTitle: { fontWeight: '600', fontSize: 18 },
+  headerSub: { fontWeight: '400', fontSize: 12, marginTop: 2 },
   startBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 20,
   },
-  startBtnText: { fontFamily: 'Nunito-Bold', fontSize: 13 },
+  startBtnText: { fontWeight: '600', fontSize: 13 },
 
   startOptions: {
     backgroundColor: C.surface1,
@@ -324,8 +324,8 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 14,
   },
-  optionLabel: { fontFamily: 'Nunito-Bold', fontSize: 15, color: C.text1 },
-  optionSub: { fontFamily: 'Nunito-Regular', fontSize: 12, color: C.text2, marginTop: 1 },
+  optionLabel: { fontWeight: '600', fontSize: 15, color: C.text1 },
+  optionSub: { fontWeight: '400', fontSize: 12, color: C.text2, marginTop: 1 },
   optionDivider: { height: 1, backgroundColor: C.border },
 
   content: { padding: 20, paddingBottom: 40 },
@@ -342,20 +342,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  goalCardTitle: { fontFamily: 'Nunito-Bold', fontSize: 14, color: C.text1 },
-  goalEditLink: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.accent },
+  goalCardTitle: { fontWeight: '600', fontSize: 14, color: C.text1 },
+  goalEditLink: { fontWeight: '500', fontSize: 13, color: C.accent },
 
-  goalValue: { fontFamily: 'Nunito-Black', fontSize: 22, color: C.text1 },
-  goalValueDim: { fontFamily: 'Nunito-Regular', fontSize: 14, color: C.text2 },
+  goalValue: { fontWeight: '700', fontSize: 22, color: C.text1 },
+  goalValueDim: { fontWeight: '400', fontSize: 14, color: C.text2 },
 
   progressTrack: { height: 6, backgroundColor: C.surface3, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: C.accent, borderRadius: 3 },
 
   goalFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  goalNote: { fontFamily: 'Nunito-Regular', fontSize: 12, color: C.text3 },
+  goalNote: { fontWeight: '400', fontSize: 12, color: C.text3 },
   goalPct: { fontFamily: 'DMMono-Medium', fontSize: 12, color: C.accent },
 
-  noGoalText: { fontFamily: 'Nunito-Regular', fontSize: 13, color: C.text3 },
+  noGoalText: { fontWeight: '400', fontSize: 13, color: C.text3 },
 
   goalEditor: { gap: 10 },
   presetRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   presetBtnActive: { backgroundColor: C.accent + '33', borderColor: C.accent },
-  presetText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.text2 },
+  presetText: { fontWeight: '500', fontSize: 13, color: C.text2 },
   presetTextActive: { color: C.accent },
   customRow: { flexDirection: 'row', gap: 8 },
   customInput: {
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     paddingHorizontal: 12,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 14,
     color: C.text1,
   },
@@ -394,10 +394,10 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     height: 40,
   },
-  customSetText: { fontFamily: 'Nunito-Bold', fontSize: 13, color: C.text1 },
-  removeGoalText: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: C.red, textAlign: 'center' },
+  customSetText: { fontWeight: '600', fontSize: 13, color: C.text1 },
+  removeGoalText: { fontWeight: '500', fontSize: 12, color: C.red, textAlign: 'center' },
 
-  sectionTitle: { fontFamily: 'Nunito-Bold', fontSize: 15, color: C.text1, marginBottom: 10 },
+  sectionTitle: { fontWeight: '600', fontSize: 15, color: C.text1, marginBottom: 10 },
 
   emptyCard: {
     backgroundColor: C.surface1,
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     padding: 36,
     alignItems: 'center',
   },
-  emptyText: { fontFamily: 'Nunito-Regular', fontSize: 14, color: C.text3 },
+  emptyText: { fontWeight: '400', fontSize: 14, color: C.text3 },
 
   row: {
     flexDirection: 'row',
@@ -416,8 +416,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   rowMain: { flex: 1 },
-  rowDate: { fontFamily: 'Nunito-Bold', fontSize: 14, color: C.text1 },
-  rowNote: { fontFamily: 'Nunito-Regular', fontSize: 12, color: C.text2, marginTop: 3 },
+  rowDate: { fontWeight: '600', fontSize: 14, color: C.text1 },
+  rowNote: { fontWeight: '400', fontSize: 12, color: C.text2, marginTop: 3 },
   duration: { fontFamily: 'DMMono-Medium', fontSize: 14, color: C.accent },
   deleteBtn: { marginLeft: 12 },
 });

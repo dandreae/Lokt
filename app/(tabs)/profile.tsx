@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 20,
   },
-  title: { fontFamily: 'Nunito-Black', fontSize: 32, color: C.text1 },
+  title: { fontWeight: '700', fontSize: 32, color: C.text1 },
   settingsBtn: {
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center',
@@ -449,19 +449,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   profileInitials: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 18,
     color: C.accent,
   },
   profileInfo: { flex: 1 },
   profileName: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 17,
     color: C.text1,
     marginBottom: 2,
   },
   profileUsername: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 13,
     color: C.text3,
   },
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 14,
     color: C.text1,
     borderWidth: 1,
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
   profileCancelText: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 13,
     color: C.text3,
   },
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileSaveText: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 13,
     color: '#fff',
   },
@@ -526,17 +526,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: C.border,
   },
   statCardFire: { borderColor: 'rgba(247,167,108,0.28)' },
-  statValue: { fontFamily: 'Nunito-Black', fontSize: 20, color: C.text1 },
+  statValue: { fontWeight: '700', fontSize: 20, color: C.text1 },
   statLabel: {
-    fontFamily: 'Nunito-SemiBold', fontSize: 10,
+    fontWeight: '500', fontSize: 10,
     color: C.text3, marginTop: 3, textAlign: 'center',
   },
 
   sectionLabel: {
-    fontFamily: 'Nunito-Bold', fontSize: 11, color: C.text3,
+    fontWeight: '600', fontSize: 11, color: C.text3,
     textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12,
   },
 
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     padding: CARD_PAD,
     marginBottom: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
   },
 
   // heatmap
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   legendRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4,
   },
-  legendText: { fontFamily: 'Nunito-Regular', fontSize: 9, color: C.text3 },
+  legendText: { fontWeight: '400', fontSize: 9, color: C.text3 },
   legendCell: { width: 10, height: 10, borderRadius: 2 },
 
   // milestones
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   },
   milestoneVal: { fontFamily: 'DMMono-Medium', fontSize: 16, color: C.text1 },
   milestoneLabel: {
-    fontFamily: 'Nunito-Regular', fontSize: 10, color: C.text3,
+    fontWeight: '400', fontSize: 10, color: C.text3,
     textAlign: 'center', lineHeight: 14,
   },
 
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   emptyCard: {
     backgroundColor: C.surface1, borderRadius: 16, padding: 36, alignItems: 'center',
   },
-  emptyText: { fontFamily: 'Nunito-Regular', fontSize: 14, color: C.text3 },
+  emptyText: { fontWeight: '400', fontSize: 14, color: C.text3 },
 
   // session log
   group: { marginBottom: 24 },
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 8, paddingHorizontal: 2,
   },
   dayLabel: {
-    fontFamily: 'Nunito-SemiBold', fontSize: 11, color: C.text3,
+    fontWeight: '500', fontSize: 11, color: C.text3,
     textTransform: 'uppercase', letterSpacing: 0.6,
   },
   dayTotal: { fontFamily: 'DMMono-Medium', fontSize: 12, color: C.accent },
@@ -603,10 +603,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 2,
   },
-  taskName: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.text1 },
+  taskName: { fontWeight: '500', fontSize: 13, color: C.text1 },
   duration: { fontFamily: 'DMMono-Medium', fontSize: 12, color: C.accent },
-  time: { fontFamily: 'Nunito-Regular', fontSize: 11, color: C.text3, marginBottom: 1 },
+  time: { fontWeight: '400', fontSize: 11, color: C.text3, marginBottom: 1 },
   note: {
-    fontFamily: 'Nunito-Regular', fontSize: 11, color: C.text3, marginTop: 2, lineHeight: 16,
+    fontWeight: '400', fontSize: 11, color: C.text3, marginTop: 2, lineHeight: 16,
   },
 });

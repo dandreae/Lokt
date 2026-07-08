@@ -168,7 +168,7 @@ function WeekRing({
     const id = animVal.addListener(({ value }) => setOffset(value));
     Animated.timing(animVal, {
       toValue: target,
-      duration: 1100,
+      duration: 600,
       useNativeDriver: false,
       easing: Easing.out(Easing.cubic),
     }).start(() => animVal.removeListener(id));
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 52 },
 
   dateText: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 11,
     color: C.text3,
     letterSpacing: 0.6,
@@ -738,19 +738,19 @@ const styles = StyleSheet.create({
   // Ring
   ringCenter: { alignItems: 'center' },
   ringPctNum: {
-    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
     fontSize: 38,
     lineHeight: 42,
     color: C.text1,
     includeFontPadding: false,
   },
   ringPctSymbol: {
-    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
     fontSize: 20,
     color: C.text2,
   },
   ringGoalLabel: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 11,
     color: C.text3,
     letterSpacing: 0.4,
@@ -760,14 +760,14 @@ const styles = StyleSheet.create({
   // Message
   heroMsgWrap: { alignItems: 'center', gap: 2 },
   heroHeadline: {
-    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
     fontSize: 18,
     color: C.text1,
     textAlign: 'center',
     lineHeight: 22,
   },
   heroSub: {
-    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
     fontSize: 18,
     textAlign: 'center',
     lineHeight: 22,
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
     color: C.text1,
   },
   statLabel: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 10,
     color: C.text3,
     letterSpacing: 0.3,
@@ -835,7 +835,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  socialAvatarText: { fontFamily: 'Nunito-Bold', fontSize: 9.5 },
+  socialAvatarText: { fontWeight: '600', fontSize: 9.5 },
   socialLiveDot: {
     position: 'absolute',
     bottom: 0,
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
   },
   socialMessage: {
     flex: 1,
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 13,
     color: C.text2,
   },
@@ -874,7 +874,7 @@ const styles = StyleSheet.create({
     height: 54,
     backgroundColor: C.accent,
   },
-  startBtnText: { fontFamily: 'Nunito-Bold', fontSize: 16, color: '#fff' },
+  startBtnText: { fontWeight: '600', fontSize: 16, color: '#fff' },
 
   setupRow: {
     flexDirection: 'row',
@@ -884,9 +884,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 12,
   },
-  setupHint: { fontFamily: 'Nunito-Regular', fontSize: 12, color: C.text3 },
+  setupHint: { fontWeight: '400', fontSize: 12, color: C.text3 },
   setupRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  setupOptions: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: C.text3 },
+  setupOptions: { fontWeight: '500', fontSize: 12, color: C.text3 },
 
   // ── Options panel ─────────────────────────────────────────────────────────
 
@@ -913,10 +913,10 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
   modeBtnActive: { backgroundColor: C.accent, borderColor: C.accent },
-  modeBtnText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.text3 },
+  modeBtnText: { fontWeight: '500', fontSize: 13, color: C.text3 },
   modeBtnTextActive: { color: '#fff' },
   panelLabel: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 11,
     color: C.text3,
     textTransform: 'uppercase',
@@ -933,11 +933,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: C.surface2,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: C.border,
   },
   pillDot: { width: 7, height: 7, borderRadius: 3.5 },
-  pillText: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: C.text3 },
-  noTasksLink: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.accent },
+  pillText: { fontWeight: '500', fontSize: 12, color: C.text3 },
+  noTasksLink: { fontWeight: '500', fontSize: 13, color: C.accent },
   focusRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -950,8 +950,8 @@ const styles = StyleSheet.create({
   },
   focusLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   moonIconWrap: { width: 16, height: 16 },
-  focusLabel: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.text2 },
-  focusSub: { fontFamily: 'Nunito-Regular', fontSize: 11, color: C.text3, marginTop: 1 },
+  focusLabel: { fontWeight: '500', fontSize: 13, color: C.text2 },
+  focusSub: { fontWeight: '400', fontSize: 11, color: C.text3, marginTop: 1 },
   toggleTrack: { width: 42, height: 24, borderRadius: 12, justifyContent: 'center' },
   toggleThumb: {
     position: 'absolute',
@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     height: 44,
   },
-  goBtnText: { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff' },
+  goBtnText: { fontWeight: '600', fontSize: 15, color: '#fff' },
 
   // ── Momentum ──────────────────────────────────────────────────────────────
 
@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 12,
     color: C.text3,
     textTransform: 'uppercase',
@@ -1007,9 +1007,9 @@ const styles = StyleSheet.create({
   },
   sessionBar: { width: 3, alignSelf: 'stretch', borderRadius: 2, marginRight: 12 },
   sessionInfo: { flex: 1 },
-  sessionSubject: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.text1 },
-  sessionNote: { fontFamily: 'Nunito-Regular', fontSize: 11, color: C.text3, marginTop: 1 },
+  sessionSubject: { fontWeight: '500', fontSize: 13, color: C.text1 },
+  sessionNote: { fontWeight: '400', fontSize: 11, color: C.text3, marginTop: 1 },
   sessionRight: { alignItems: 'flex-end' },
   sessionDuration: { fontFamily: 'DMMono-Medium', fontSize: 13, color: C.accent },
-  sessionDate: { fontFamily: 'Nunito-Regular', fontSize: 10, color: C.text3, marginTop: 2 },
+  sessionDate: { fontWeight: '400', fontSize: 10, color: C.text3, marginTop: 2 },
 });

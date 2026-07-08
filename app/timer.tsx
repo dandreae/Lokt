@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     borderBottomColor: C.border,
   },
   headerTitle: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 18,
     color: C.text1,
   },
@@ -479,13 +479,13 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   doneText: {
-    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
     fontSize: 36,
     color: C.accent2,
     letterSpacing: 0,
   },
   taskLabel: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 12,
     marginTop: 5,
     letterSpacing: 0.3,
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
 
   sectionLabel: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 14,
     color: C.text2,
     marginBottom: 10,
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   presetText: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 14,
     color: C.text2,
   },
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 14,
     color: C.text1,
     borderWidth: 1,
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   customBtnText: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 14,
     color: C.text1,
   },
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
   btnText: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 16,
     color: '#fff',
   },
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   emptyTasksText: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 13,
     color: C.text3,
   },
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
   },
   pillDot: { width: 12, height: 12, borderRadius: 3 },
   pillText: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 13,
     color: C.text2,
   },
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface2,
     borderRadius: 14,
     padding: 14,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 15,
     color: C.text1,
     borderWidth: 1,
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   saveBtnText: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 16,
     color: '#0a2a20',
   },

@@ -276,13 +276,13 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   appName: {
-    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
     fontSize: 42,
     color: C.text1,
     letterSpacing: -1,
   },
   tagline: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 15,
     color: C.text3,
     marginTop: 4,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: { backgroundColor: C.surface3 },
-  tabText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: C.text3 },
+  tabText: { fontWeight: '500', fontSize: 14, color: C.text3 },
   tabTextActive: { color: C.text1 },
 
   card: {
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
     marginBottom: 20,
   },
 
@@ -330,18 +330,18 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 15,
     color: C.text1,
     padding: 0,
   },
   atSign: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 15,
     color: C.text3,
   },
   usernameHint: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 11,
     color: C.text3,
     marginTop: -4,
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   reqText: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 12,
     color: C.text3,
   },
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     borderColor: C.red + '30',
   },
   errorText: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 13,
     color: C.red,
     flex: 1,
@@ -396,19 +396,19 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent,
   },
   submitText: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 16,
     color: '#fff',
   },
 
   footer: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 13,
     color: C.text3,
     textAlign: 'center',
   },
   footerLink: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     color: C.accent,
   },
 });

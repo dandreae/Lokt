@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
 
   title: {
-    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
     fontSize: 32,
     color: C.text1,
     marginBottom: 14,
@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: { backgroundColor: C.surface3 },
-  tabText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: C.text3 },
+  tabText: { fontWeight: '500', fontSize: 14, color: C.text3 },
   tabTextActive: { color: C.text1 },
 
   // School
@@ -880,12 +880,12 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   schoolName: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 15,
     color: C.text1,
   },
   leaveText: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 13,
     color: C.text3,
   },
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   createSchoolText: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 14,
     color: C.accent,
   },
@@ -910,10 +910,10 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
   },
   pendingTitle: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 14,
     color: C.text1,
   },
@@ -931,17 +931,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pendingInitials: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 12,
     color: C.text2,
   },
   pendingName: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 14,
     color: C.text1,
   },
   pendingUsername: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 11,
     color: C.text3,
   },
@@ -952,7 +952,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   acceptBtnText: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 13,
     color: '#fff',
   },
@@ -988,12 +988,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1.5,
   },
-  togetherInitials: { fontFamily: 'Nunito-Bold', fontSize: 11 },
-  togetherName: { fontFamily: 'Nunito-Bold', fontSize: 13, color: C.text1, marginBottom: 1 },
-  togetherSub: { fontFamily: 'Nunito-Regular', fontSize: 11, color: C.text3 },
+  togetherInitials: { fontWeight: '600', fontSize: 11 },
+  togetherName: { fontWeight: '600', fontSize: 13, color: C.text1, marginBottom: 1 },
+  togetherSub: { fontWeight: '400', fontSize: 11, color: C.text3 },
   togetherLive: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   togetherLiveText: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 9,
     color: C.accent2,
     letterSpacing: 0.8,
@@ -1001,8 +1001,8 @@ const styles = StyleSheet.create({
 
   // Empty state
   emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyTitle: { fontFamily: 'Nunito-Bold', fontSize: 16, color: C.text2, marginBottom: 6 },
-  emptySub: { fontFamily: 'Nunito-Regular', fontSize: 13, color: C.text3, textAlign: 'center' },
+  emptyTitle: { fontWeight: '600', fontSize: 16, color: C.text2, marginBottom: 6 },
+  emptySub: { fontWeight: '400', fontSize: 13, color: C.text3, textAlign: 'center' },
 
   // Leaderboard rows
   row: {
@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: C.border,
     gap: 10,
     overflow: 'hidden',
   },
@@ -1036,7 +1036,7 @@ const styles = StyleSheet.create({
   },
   goldOverlay: { borderRadius: 16, backgroundColor: GOLD },
   rankCol: { width: 34, alignItems: 'center' },
-  rank: { fontFamily: 'Nunito-Bold', fontSize: 15, color: C.text2, textAlign: 'center' },
+  rank: { fontWeight: '600', fontSize: 15, color: C.text2, textAlign: 'center' },
   rankFirst: { fontSize: 18, color: GOLD },
   avatarWrap: { width: 44, height: 44 },
   avatarGlow: {
@@ -1052,7 +1052,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  initials: { fontFamily: 'Nunito-Bold', fontSize: 14 },
+  initials: { fontWeight: '600', fontSize: 14 },
   info: { flex: 1 },
   nameRow: {
     flexDirection: 'row',
@@ -1061,7 +1061,7 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 6,
   },
-  name: { fontFamily: 'Nunito-Bold', fontSize: 15, color: C.text1 },
+  name: { fontWeight: '600', fontSize: 15, color: C.text1 },
   nameMe: { color: C.accent },
   leaderBadge: {
     backgroundColor: 'rgba(212,184,64,0.12)',
@@ -1071,7 +1071,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(212,184,64,0.28)',
   },
-  leaderText: { fontFamily: 'Nunito-Bold', fontSize: 8, color: GOLD, letterSpacing: 0.8 },
+  leaderText: { fontWeight: '600', fontSize: 8, color: GOLD, letterSpacing: 0.8 },
   liveChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   liveDot: { width: 6, height: 6, borderRadius: 3 },
-  liveText: { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: C.red },
+  liveText: { fontWeight: '500', fontSize: 10, color: C.red },
   progressTrack: {
     height: 4,
     backgroundColor: C.surface3,
@@ -1092,7 +1092,7 @@ const styles = StyleSheet.create({
   },
   progressFill: { height: '100%', borderRadius: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  gapText: { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: C.text3 },
+  gapText: { fontWeight: '500', fontSize: 10, color: C.text3 },
   gapTextMe: { color: C.accent },
   duration: { fontFamily: 'DMMono-Medium', fontSize: 13, color: C.text2 },
   durationMe: { color: C.accent },
@@ -1104,11 +1104,11 @@ const styles = StyleSheet.create({
     padding: 20,
     marginTop: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: C.border,
     gap: 12,
   },
-  addTitle: { fontFamily: 'Nunito-Bold', fontSize: 16, color: C.text1 },
-  addYourUsername: { fontFamily: 'Nunito-Regular', fontSize: 12, color: C.text3 },
+  addTitle: { fontWeight: '600', fontSize: 16, color: C.text1 },
+  addYourUsername: { fontWeight: '400', fontSize: 12, color: C.text3 },
   addRow: { flexDirection: 'row', alignItems: 'center' },
   input: {
     flex: 1,
@@ -1116,7 +1116,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 14,
     color: C.text1,
     borderWidth: 1,
@@ -1140,9 +1140,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchInitials: { fontFamily: 'Nunito-Bold', fontSize: 12 },
-  searchName: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: C.text1 },
-  searchUsername: { fontFamily: 'Nunito-Regular', fontSize: 11, color: C.text3 },
+  searchInitials: { fontWeight: '600', fontSize: 12 },
+  searchName: { fontWeight: '500', fontSize: 14, color: C.text1 },
+  searchUsername: { fontWeight: '400', fontSize: 11, color: C.text3 },
   addBtn: {
     backgroundColor: C.accent,
     borderRadius: 8,
@@ -1152,9 +1152,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addBtnSent: { backgroundColor: C.surface3 },
-  addBtnText: { fontFamily: 'Nunito-Bold', fontSize: 13, color: '#fff' },
+  addBtnText: { fontWeight: '600', fontSize: 13, color: '#fff' },
   noResults: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 13,
     color: C.text3,
     textAlign: 'center',
@@ -1168,7 +1168,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   verifyBackText: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 13,
     color: C.text3,
   },
@@ -1180,7 +1180,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   verifyErrorText: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 12,
     color: C.red,
   },

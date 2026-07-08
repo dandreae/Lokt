@@ -318,12 +318,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  headerTitle: { fontFamily: 'Nunito-Bold', fontSize: 18, color: C.text1 },
+  headerTitle: { fontWeight: '600', fontSize: 18, color: C.text1 },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 48 },
 
   sectionLabel: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 12,
     color: C.text3,
     textTransform: 'uppercase',
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionSub: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 12,
     color: C.text3,
     marginBottom: 14,
@@ -346,11 +346,11 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
   },
 
   currentGoal: {
-    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
     fontSize: 22,
     color: C.accent,
   },
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   presetBtnActive: { backgroundColor: C.accent + '33', borderColor: C.accent },
-  presetText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.text2 },
+  presetText: { fontWeight: '500', fontSize: 13, color: C.text2 },
   presetTextActive: { color: C.accent },
 
   customRow: { flexDirection: 'row', gap: 8 },
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     paddingHorizontal: 12,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 14,
     color: C.text1,
   },
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     height: 40,
   },
-  customSetText: { fontFamily: 'Nunito-Bold', fontSize: 13, color: C.text1 },
+  customSetText: { fontWeight: '600', fontSize: 13, color: C.text1 },
 
   // permission banner
   permBanner: {
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
   },
   permIconWrap: {
     width: 36,
@@ -414,8 +414,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  permTitle: { fontFamily: 'Nunito-Bold', fontSize: 13, color: C.text1, marginBottom: 2 },
-  permSub: { fontFamily: 'Nunito-Regular', fontSize: 11, color: C.text3, lineHeight: 15 },
+  permTitle: { fontWeight: '600', fontSize: 13, color: C.text1, marginBottom: 2 },
+  permSub: { fontWeight: '400', fontSize: 11, color: C.text3, lineHeight: 15 },
   permBtn: {
     backgroundColor: C.accent,
     borderRadius: 10,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignSelf: 'center',
   },
-  permBtnText: { fontFamily: 'Nunito-Bold', fontSize: 13, color: '#fff' },
+  permBtnText: { fontWeight: '600', fontSize: 13, color: '#fff' },
 
   // notification rows
   notifCard: {
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: C.border,
     overflow: 'hidden',
   },
   divider: {
@@ -453,8 +453,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   notifText: { flex: 1 },
-  notifTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: C.text1, marginBottom: 2 },
-  notifSub: { fontFamily: 'Nunito-Regular', fontSize: 11, color: C.text3, lineHeight: 15 },
+  notifTitle: { fontWeight: '500', fontSize: 14, color: C.text1, marginBottom: 2 },
+  notifSub: { fontWeight: '400', fontSize: 11, color: C.text3, lineHeight: 15 },
 
   // toggle
   toggleTrack: {
@@ -484,8 +484,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
   },
-  aboutLabel: { fontFamily: 'Nunito-Regular', fontSize: 14, color: C.text2 },
-  aboutValue: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: C.text1 },
+  aboutLabel: { fontWeight: '400', fontSize: 14, color: C.text2 },
+  aboutValue: { fontWeight: '500', fontSize: 14, color: C.text1 },
 
   logoutBtn: {
     flexDirection: 'row',
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   logoutText: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 15,
     color: C.red,
   },

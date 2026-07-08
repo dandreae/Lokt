@@ -17,7 +17,6 @@ import { C } from '../../constants/colors';
 import { getTasks, createTask, deleteTask, TASK_COLORS } from '../../store/tasks';
 import { generateId } from '../../utils/supabase';
 import { getSessions, getWeekSessions, deleteSessionsByTaskId } from '../../store/sessions';
-import { darkCardBg } from '../../utils/color';
 import { formatDuration } from '../../utils/format';
 import { useFadeIn } from '../../utils/useFadeIn';
 import type { Task, Session } from '../../types';
@@ -53,8 +52,6 @@ function TaskCard({ task, sessions, weekSessions, onPress, onDelete }: {
   const weekTaskSecs = weekSessions.filter((s) => s.subjectId === task.id).reduce((a, s) => a + s.secs, 0);
   const hours = isNaN(totalSecs) ? '0.0' : (totalSecs / 3600).toFixed(1);
 
-  const isActive = weekTaskSecs > 0;
-  const cardBg = darkCardBg(task.color, isActive);
 
   const hasGoal = task.weeklyGoalSecs != null && task.weeklyGoalSecs > 0;
   const goalPct = hasGoal ? Math.min(Math.round((weekTaskSecs / task.weeklyGoalSecs!) * 100), 100) : 0;
@@ -76,9 +73,9 @@ function TaskCard({ task, sessions, weekSessions, onPress, onDelete }: {
   }, [goalPct, hasGoal]);
 
   return (
-    <Animated.View style={[styles.cardWrapper, { shadowColor: task.color, transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View style={[styles.cardWrapper, { transform: [{ scale: scaleAnim }] }]}>
       <TouchableOpacity
-        style={[styles.card, { backgroundColor: cardBg, borderColor: task.color + '28' }]}
+        style={styles.card}
         onPress={onPress}
         onPressIn={() =>
           Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start()
@@ -330,7 +327,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  title: { fontFamily: 'Nunito-Black', fontSize: 32, color: C.text1 },
+  title: { fontWeight: '700', fontSize: 32, color: C.text1 },
   addBtn: {
     width: 40,
     height: 40,
@@ -358,12 +355,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     paddingHorizontal: 14,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 15,
     color: C.text1,
   },
   formSectionLabel: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 12,
     color: C.text3,
     textTransform: 'uppercase',
@@ -385,7 +382,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   goalPresetBtnActive: { backgroundColor: C.accent + '33', borderColor: C.accent },
-  goalPresetText: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: C.text2 },
+  goalPresetText: { fontWeight: '500', fontSize: 13, color: C.text2 },
   goalPresetTextActive: { color: C.accent },
 
   customRow: { flexDirection: 'row', gap: 8 },
@@ -397,7 +394,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     paddingHorizontal: 12,
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 14,
     color: C.text1,
   },
@@ -410,8 +407,8 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     height: 40,
   },
-  customSetText: { fontFamily: 'Nunito-Bold', fontSize: 13, color: C.text1 },
-  goalConfirm: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: C.accent },
+  customSetText: { fontWeight: '600', fontSize: 13, color: C.text1 },
+  goalConfirm: { fontWeight: '500', fontSize: 12, color: C.accent },
 
   createBtn: {
     backgroundColor: C.accent,
@@ -421,7 +418,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   createBtnDisabled: { opacity: 0.4 },
-  createBtnText: { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff' },
+  createBtnText: { fontWeight: '600', fontSize: 15, color: '#fff' },
 
   emptyCard: {
     backgroundColor: C.surface1,
@@ -431,26 +428,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
-  emptyTitle: { fontFamily: 'Nunito-Bold', fontSize: 16, color: C.text1, marginBottom: 4 },
-  emptyText: { fontFamily: 'Nunito-Regular', fontSize: 13, color: C.text3 },
+  emptyTitle: { fontWeight: '600', fontSize: 16, color: C.text1, marginBottom: 4 },
+  emptyText: { fontWeight: '400', fontSize: 13, color: C.text3 },
 
-  // Card wrapper — colored shadow at low opacity
   cardWrapper: {
-    borderRadius: 16,
-    marginBottom: 12,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.20,
-    shadowRadius: 12,
-    elevation: 4,
+    borderRadius: 14,
+    marginBottom: 10,
   },
-  // Card body — dark tinted bg + subtle border set inline, overflow clips gradient/bar
   card: {
-    borderRadius: 16,
+    backgroundColor: C.surface1,
+    borderRadius: 14,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
     flexDirection: 'row',
   },
-  // 3px left accent bar
   accentBar: {
     width: 3,
   },
@@ -467,15 +459,15 @@ const styles = StyleSheet.create({
   },
   cardLeft: { flex: 1, paddingRight: 8 },
   label: {
-    fontFamily: 'Nunito-Bold',
+    fontWeight: '600',
     fontSize: 17,
     color: C.text1,
     marginBottom: 3,
   },
   meta: {
-    fontFamily: 'Nunito-Regular',
+    fontWeight: '400',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.45)',
+    color: C.text3,
   },
 
   goalSection: { gap: 6 },
@@ -492,7 +484,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   goalNote: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 11,
     color: 'rgba(255,255,255,0.5)',
   },
@@ -503,7 +495,7 @@ const styles = StyleSheet.create({
 
   noGoalRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   noGoalTime: {
-    fontFamily: 'Nunito-SemiBold',
+    fontWeight: '500',
     fontSize: 12,
     flex: 1,
     color: 'rgba(255,255,255,0.5)',
@@ -515,5 +507,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  setGoalText: { fontFamily: 'Nunito-Bold', fontSize: 11 },
+  setGoalText: { fontWeight: '600', fontSize: 11 },
 });
