@@ -573,7 +573,6 @@ export default function HomeScreen() {
           <Animated.View style={[styles.startShadowWrap, showPanel && styles.startShadowWrapMuted, { transform: [{ scale: pulseAnim }] }]}>
             <ScalePressable onPress={handleQuickStart} scaleTo={0.97} style={styles.startBtnTouchable}>
               <View style={styles.startBtnGradient}>
-                <Ionicons name="play-circle-outline" size={24} color="#fff" />
                 <Text style={styles.startBtnText}>Start Studying</Text>
               </View>
             </ScalePressable>
