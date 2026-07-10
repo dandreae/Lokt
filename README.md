@@ -4,9 +4,9 @@ A mobile app for students to log study sessions, track weekly goals, and compete
 
 <p align="center">
   <img src="assets/screenshots/home.png" width="23%" />
+  <img src="assets/screenshots/subjects.png" width="23%" />
   <img src="assets/screenshots/friends.png" width="23%" />
   <img src="assets/screenshots/profile.png" width="23%" />
-  <img src="assets/screenshots/timer.png" width="23%" />
 </p>
 
 ## Overview
