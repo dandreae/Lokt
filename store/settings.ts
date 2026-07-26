@@ -1,4 +1,5 @@
 import { supabase, getUserId } from '../utils/supabase';
+import { PREVIEW, PREVIEW_SETTINGS } from '../utils/previewData';
 
 export type Settings = {
   weeklyGoalSecs: number;
@@ -9,6 +10,7 @@ const DEFAULTS: Settings = { weeklyGoalSecs: 8 * 3600 };
 // Load the user's settings from Supabase.
 // If they haven't saved any yet (new user), return the defaults.
 export async function getSettings(): Promise<Settings> {
+  if (PREVIEW) return { ...PREVIEW_SETTINGS };
   const userId = await getUserId();
   if (!userId) return { ...DEFAULTS };
 

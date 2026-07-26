@@ -1,24 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  Animated,
-  Easing,
   View,
   Text,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  ScrollView,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../../constants/colors';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { colors, spacing, radii, componentHeights, fonts, shadows, type } from '../../constants/theme';
+import { AppHeader } from '../../components/AppHeader';
+import { IconButton } from '../../components/IconButton';
+import { PrimaryButton } from '../../components/PrimaryButton';
+import { EmptyState } from '../../components/EmptyState';
+import { ProgressBar } from '../../components/ProgressBar';
+import { ScalePressable } from '../../utils/ScalePressable';
+import { getSubjectIcon } from '../../utils/subjectIcon';
+import { SubjectIcon } from '../../components/SubjectIcon';
 import { getTasks, createTask, deleteTask, TASK_COLORS } from '../../store/tasks';
 import { generateId } from '../../utils/supabase';
 import { getSessions, getWeekSessions, deleteSessionsByTaskId } from '../../store/sessions';
 import { formatDuration } from '../../utils/format';
-import { useFadeIn } from '../../utils/useFadeIn';
 import type { Task, Session } from '../../types';
 
 const GOAL_PRESETS = [
@@ -38,103 +44,107 @@ function getGoalNote(pct: number, weekSecs: number, goalSecs: number): string {
   return 'Keep going';
 }
 
+function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// Consecutive-day streak scoped to one task's own sessions — pure
+// presentational derivation from existing session data, same technique
+// used for the profile's overall streak.
+function computeTaskStreak(taskSessions: Session[]): number {
+  if (!taskSessions.length) return 0;
+  const days = new Set(taskSessions.map((s) => dateKey(new Date(s.ts))));
+  const today = new Date();
+  const offset = days.has(dateKey(today)) ? 0 : 1;
+  let n = 0;
+  for (let i = offset; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    if (days.has(dateKey(d))) n++;
+    else break;
+  }
+  return n;
+}
+
 // ─── Task Card ────────────────────────────────────────────────────────────────
 
-function TaskCard({ task, sessions, weekSessions, onPress, onDelete }: {
+function TaskCard({ task, sessions, weekSessions, onPress, onOptions }: {
   task: Task;
   sessions: Session[];
   weekSessions: Session[];
   onPress: () => void;
-  onDelete: () => void;
+  onOptions: () => void;
 }) {
   const taskSessions = sessions.filter((s) => s.subjectId === task.id);
   const totalSecs = taskSessions.reduce((a, s) => a + s.secs, 0);
   const weekTaskSecs = weekSessions.filter((s) => s.subjectId === task.id).reduce((a, s) => a + s.secs, 0);
   const hours = isNaN(totalSecs) ? '0.0' : (totalSecs / 3600).toFixed(1);
-
+  const streak = computeTaskStreak(taskSessions);
+  const icon = getSubjectIcon(task.label);
 
   const hasGoal = task.weeklyGoalSecs != null && task.weeklyGoalSecs > 0;
   const goalPct = hasGoal ? Math.min(Math.round((weekTaskSecs / task.weeklyGoalSecs!) * 100), 100) : 0;
   const goalNote = hasGoal ? getGoalNote(goalPct, weekTaskSecs, task.weeklyGoalSecs!) : '';
 
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const barAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!hasGoal || goalPct <= 0) return;
-    const anim = Animated.timing(barAnim, {
-      toValue: goalPct,
-      duration: 700,
-      useNativeDriver: false,
-      easing: Easing.out(Easing.cubic),
-    });
-    anim.start();
-    return () => anim.stop();
-  }, [goalPct, hasGoal]);
-
   return (
-    <Animated.View style={[styles.cardWrapper, { transform: [{ scale: scaleAnim }] }]}>
-      <TouchableOpacity
-        style={styles.card}
-        onPress={onPress}
-        onPressIn={() =>
-          Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start()
-        }
-        onPressOut={() =>
-          Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 4 }).start()
-        }
-        activeOpacity={1}
-      >
+    <ScalePressable onPress={onPress} scaleTo={0.98} style={[styles.cardWrapper, shadows.tinted(task.color)]}>
+      <View style={[styles.card, { borderColor: task.color + '2A' }]}>
+        <View style={[StyleSheet.absoluteFill, styles.cardTint, { backgroundColor: task.color }]} pointerEvents="none" />
 
-        {/* Left color accent bar */}
-        <View style={[styles.accentBar, { backgroundColor: task.color }]} />
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeaderRow}>
+            <View style={[styles.iconTile, { backgroundColor: task.color + '24', borderColor: task.color + '40' }]}>
+              <SubjectIcon icon={icon} size={20} color={task.color} />
+            </View>
 
-        <View style={styles.cardInner}>
-          <View style={styles.cardTop}>
-            <View style={styles.cardLeft}>
-              <Text style={styles.label}>{task.label}</Text>
+            <View style={styles.cardTitleCol}>
+              <Text style={styles.label} numberOfLines={1}>{task.label}</Text>
               <Text style={styles.meta}>
                 {taskSessions.length} session{taskSessions.length !== 1 ? 's' : ''} · {hours}h total
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={onDelete}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="trash-outline" size={16} color="rgba(255,255,255,0.3)" />
-            </TouchableOpacity>
+
+            <View style={styles.cardTopRight}>
+              {streak > 0 && (
+                <View style={[styles.streakChip, { backgroundColor: colors.warning + '1c', borderColor: colors.warning + '33' }]}>
+                  <Ionicons name="flame" size={11} color={colors.warning} />
+                  <Text style={[styles.streakText, { color: colors.warning }]}>{streak}d</Text>
+                </View>
+              )}
+              <IconButton
+                icon="ellipsis-horizontal"
+                onPress={onOptions}
+                size="sm"
+                color={colors.textMuted}
+                accessibilityLabel="Task options"
+              />
+            </View>
           </View>
 
           {hasGoal ? (
             <View style={styles.goalSection}>
-              <View style={styles.track}>
-                <Animated.View style={[styles.fill, {
-                  width: barAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
-                  backgroundColor: task.color,
-                }]} />
-              </View>
+              <ProgressBar progress={goalPct / 100} color={task.color} height={8} gradient glow />
               <View style={styles.goalFooter}>
                 <Text style={styles.goalNote}>{goalNote}</Text>
-                <Text style={[styles.goalPct, { color: task.color }]}>
-                  {formatDuration(weekTaskSecs)} / {formatDuration(task.weeklyGoalSecs!)} · {goalPct}%
-                </Text>
+                <Text style={[styles.goalPct, { color: task.color }]}>{goalPct}%</Text>
               </View>
             </View>
           ) : (
             <View style={styles.noGoalRow}>
-              {weekTaskSecs > 0 && (
-                <Text style={styles.noGoalTime}>
-                  {formatDuration(weekTaskSecs)} this week
+              <View style={styles.ghostChip}>
+                <Ionicons name="flag-outline" size={12} color={colors.textMuted} />
+                <Text style={styles.ghostChipText} numberOfLines={1}>
+                  {weekTaskSecs > 0 ? `${formatDuration(weekTaskSecs)} this week` : 'No weekly goal set'}
                 </Text>
-              )}
-              <View style={[styles.setGoalChip, { borderColor: task.color + '40' }]}>
+              </View>
+              <View style={[styles.setGoalChip, { backgroundColor: task.color + '22', borderColor: task.color + '55' }]}>
                 <Text style={[styles.setGoalText, { color: task.color }]}>+ Set goal</Text>
               </View>
             </View>
           )}
         </View>
-      </TouchableOpacity>
-    </Animated.View>
+      </View>
+    </ScalePressable>
   );
 }
 
@@ -149,8 +159,6 @@ export default function TasksScreen() {
   const [newColor, setNewColor] = useState(TASK_COLORS[0]);
   const [newGoalSecs, setNewGoalSecs] = useState<number | undefined>(undefined);
   const [customGoalInput, setCustomGoalInput] = useState('');
-
-  const fadeAnim = useFadeIn();
 
   const reload = useCallback(() => {
     getTasks().then(setTasks);
@@ -187,15 +195,15 @@ export default function TasksScreen() {
     }
   }
 
-  function handleDelete(task: Task) {
+  function handleTaskOptions(task: Task) {
     const count = sessions.filter((s) => s.subjectId === task.id).length;
     const message = count > 0
       ? `"${task.label}" and its ${count} session log${count !== 1 ? 's' : ''} will be permanently deleted.`
       : `"${task.label}" will be permanently deleted.`;
-    Alert.alert('Delete Task', message, [
+    Alert.alert(task.label, message, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Delete Task',
         style: 'destructive',
         onPress: () =>
           deleteSessionsByTaskId(task.id)
@@ -208,276 +216,219 @@ export default function TasksScreen() {
   const weekSessions = getWeekSessions(sessions);
 
   return (
-    <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Tasks</Text>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => setShowForm((v) => !v)}
-              activeOpacity={0.75}
-            >
-              <Ionicons name={showForm ? 'close' : 'add'} size={22} color={C.text1} />
-            </TouchableOpacity>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <LinearGradient
+        colors={[colors.backgroundSecondary, colors.backgroundPrimary]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <AppHeader variant="large" title="Tasks" />
+            <Text style={styles.subtitle}>Track your progress. Build momentum.</Text>
           </View>
+          <ScalePressable onPress={() => setShowForm((v) => !v)} scaleTo={0.9} style={[styles.fab, shadows.tinted(colors.accentPrimary)]}>
+            <Ionicons name={showForm ? 'close' : 'add'} size={26} color={colors.textOnAccent} />
+          </ScalePressable>
+        </View>
 
-          {showForm && (
-            <View style={styles.form}>
-              <TextInput
-                style={styles.labelInput}
-                placeholder="Task name…"
-                placeholderTextColor={C.text3}
-                value={newLabel}
-                onChangeText={setNewLabel}
-                returnKeyType="done"
-                autoFocus
-              />
-              <Text style={styles.formSectionLabel}>Color</Text>
-              <View style={styles.colorRow}>
-                {TASK_COLORS.map((col) => (
-                  <TouchableOpacity
-                    key={col}
-                    style={[styles.swatch, { backgroundColor: col }, newColor === col && styles.swatchSelected]}
-                    onPress={() => setNewColor(col)}
-                    activeOpacity={0.8}
-                  />
-                ))}
-              </View>
-              <Text style={styles.formSectionLabel}>Weekly Goal (optional)</Text>
-              <View style={styles.goalPresetRow}>
-                {GOAL_PRESETS.map((p) => (
-                  <TouchableOpacity
-                    key={p.secs}
-                    style={[styles.goalPresetBtn, newGoalSecs === p.secs && styles.goalPresetBtnActive]}
-                    onPress={() => setNewGoalSecs(newGoalSecs === p.secs ? undefined : p.secs)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[styles.goalPresetText, newGoalSecs === p.secs && styles.goalPresetTextActive]}>
-                      {p.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.customRow}>
-                <TextInput
-                  style={styles.customInput}
-                  placeholder="Custom (hours)"
-                  placeholderTextColor={C.text3}
-                  value={customGoalInput}
-                  onChangeText={setCustomGoalInput}
-                  keyboardType="decimal-pad"
-                  returnKeyType="done"
-                  onSubmitEditing={applyCustomGoal}
+        {showForm && (
+          <View style={styles.form}>
+            <TextInput
+              style={styles.labelInput}
+              placeholder="Task name…"
+              placeholderTextColor={colors.textMuted}
+              value={newLabel}
+              onChangeText={setNewLabel}
+              returnKeyType="done"
+              autoFocus
+            />
+            <Text style={type.sectionTitle}>Color</Text>
+            <View style={styles.colorRow}>
+              {TASK_COLORS.map((col) => (
+                <TouchableOpacity
+                  key={col}
+                  style={[styles.swatch, { backgroundColor: col }, newColor === col && styles.swatchSelected]}
+                  onPress={() => setNewColor(col)}
+                  activeOpacity={0.8}
                 />
-                <TouchableOpacity style={styles.customSetBtn} onPress={applyCustomGoal} activeOpacity={0.75}>
-                  <Text style={styles.customSetText}>Set</Text>
+              ))}
+            </View>
+            <Text style={type.sectionTitle}>Weekly Goal (optional)</Text>
+            <View style={styles.goalPresetRow}>
+              {GOAL_PRESETS.map((p) => (
+                <TouchableOpacity
+                  key={p.secs}
+                  style={[styles.goalPresetBtn, newGoalSecs === p.secs && styles.goalPresetBtnActive]}
+                  onPress={() => setNewGoalSecs(newGoalSecs === p.secs ? undefined : p.secs)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.goalPresetText, newGoalSecs === p.secs && styles.goalPresetTextActive]}>
+                    {p.label}
+                  </Text>
                 </TouchableOpacity>
-              </View>
-              {newGoalSecs !== undefined && (
-                <Text style={styles.goalConfirm}>Goal: {formatDuration(newGoalSecs)} / week</Text>
-              )}
-              <TouchableOpacity
-                style={[styles.createBtn, !newLabel.trim() && styles.createBtnDisabled]}
-                onPress={handleCreate}
-                activeOpacity={0.75}
-                disabled={!newLabel.trim()}
-              >
-                <Text style={styles.createBtnText}>Create Task</Text>
+              ))}
+            </View>
+            <View style={styles.customRow}>
+              <TextInput
+                style={styles.customInput}
+                placeholder="Custom (hours)"
+                placeholderTextColor={colors.textMuted}
+                value={customGoalInput}
+                onChangeText={setCustomGoalInput}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                onSubmitEditing={applyCustomGoal}
+              />
+              <TouchableOpacity style={styles.customSetBtn} onPress={applyCustomGoal} activeOpacity={0.75}>
+                <Text style={styles.customSetText}>Set</Text>
               </TouchableOpacity>
             </View>
-          )}
+            {newGoalSecs !== undefined && (
+              <Text style={styles.goalConfirm}>Goal: {formatDuration(newGoalSecs)} / week</Text>
+            )}
+            <PrimaryButton title="Create Task" onPress={handleCreate} disabled={!newLabel.trim()} />
+          </View>
+        )}
 
-          {tasks.length === 0 && !showForm ? (
-            <View style={styles.emptyCard}>
-              <Ionicons name="albums-outline" size={36} color={C.text3} style={{ marginBottom: 12 }} />
-              <Text style={styles.emptyTitle}>No tasks yet</Text>
-              <Text style={styles.emptyText}>Tap + to create your first task</Text>
-            </View>
-          ) : (
-            tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                sessions={sessions}
-                weekSessions={weekSessions}
-                onPress={() => router.push({ pathname: '/task-detail', params: { taskId: task.id } })}
-                onDelete={() => handleDelete(task)}
-              />
-            ))
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </Animated.View>
+        {tasks.length === 0 && !showForm ? (
+          <EmptyState
+            icon="albums-outline"
+            title="No tasks yet"
+            subtitle="Create a task to start tracking your study time."
+          />
+        ) : (
+          tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              sessions={sessions}
+              weekSessions={weekSessions}
+              onPress={() => router.push({ pathname: '/task-detail', params: { taskId: task.id } })}
+              onOptions={() => handleTaskOptions(task)}
+            />
+          ))
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1, backgroundColor: colors.backgroundPrimary },
   scroll: { flex: 1 },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.section + spacing.lg },
 
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: { fontWeight: '700', fontSize: 32, color: C.text1 },
-  addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: C.surface2,
-    borderWidth: 1,
-    borderColor: C.border,
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.xl },
+  subtitle: { ...type.meta, marginTop: -spacing.sm, marginBottom: spacing.xs },
+  fab: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.full,
+    backgroundColor: colors.accentPrimary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 2,
   },
 
   form: {
-    backgroundColor: C.surface1,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 12,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
   labelInput: {
-    height: 52,
-    backgroundColor: C.surface2,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
+    height: componentHeights.input,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     fontWeight: '400',
     fontSize: 15,
-    color: C.text1,
+    color: colors.textPrimary,
   },
-  formSectionLabel: {
-    fontWeight: '600',
-    fontSize: 12,
-    color: C.text3,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  colorRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  swatch: { width: 30, height: 30, borderRadius: 8 },
-  swatchSelected: { borderWidth: 2.5, borderColor: C.text1 },
+  colorRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  swatch: { width: 28, height: 28, borderRadius: radii.full },
+  swatchSelected: { borderWidth: 2.5, borderColor: colors.textPrimary },
 
-  goalPresetRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  goalPresetRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   goalPresetBtn: {
-    paddingHorizontal: 14,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: C.surface2,
+    paddingHorizontal: spacing.lg,
+    height: componentHeights.chip,
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceSunken,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  goalPresetBtnActive: { backgroundColor: C.accent + '33', borderColor: C.accent },
-  goalPresetText: { fontWeight: '500', fontSize: 13, color: C.text2 },
-  goalPresetTextActive: { color: C.accent },
+  goalPresetBtnActive: { backgroundColor: colors.accentPrimary + '33', borderColor: colors.accentPrimary },
+  goalPresetText: { fontWeight: '500', fontSize: 13, color: colors.textSecondary },
+  goalPresetTextActive: { color: colors.accentPrimary },
 
-  customRow: { flexDirection: 'row', gap: 8 },
+  customRow: { flexDirection: 'row', gap: spacing.sm },
   customInput: {
     flex: 1,
-    height: 40,
-    backgroundColor: C.surface2,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 12,
+    height: componentHeights.buttonCompact,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     fontWeight: '400',
     fontSize: 14,
-    color: C.text1,
+    color: colors.textPrimary,
   },
   customSetBtn: {
-    backgroundColor: C.surface2,
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: C.border,
-    height: 40,
+    borderColor: colors.border,
+    height: componentHeights.buttonCompact,
   },
-  customSetText: { fontWeight: '600', fontSize: 13, color: C.text1 },
-  goalConfirm: { fontWeight: '500', fontSize: 12, color: C.accent },
-
-  createBtn: {
-    backgroundColor: C.accent,
-    borderRadius: 12,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createBtnDisabled: { opacity: 0.4 },
-  createBtnText: { fontWeight: '600', fontSize: 15, color: '#fff' },
-
-  emptyCard: {
-    backgroundColor: C.surface1,
-    borderRadius: 16,
-    padding: 36,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  emptyTitle: { fontWeight: '600', fontSize: 16, color: C.text1, marginBottom: 4 },
-  emptyText: { fontWeight: '400', fontSize: 13, color: C.text3 },
+  customSetText: { fontWeight: '600', fontSize: 13, color: colors.textPrimary },
+  goalConfirm: { fontWeight: '500', fontSize: 12, color: colors.accentPrimary },
 
   cardWrapper: {
-    borderRadius: 14,
-    marginBottom: 10,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
   },
   card: {
-    backgroundColor: C.surface1,
-    borderRadius: 14,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    flexDirection: 'row',
+    borderWidth: 1,
   },
-  accentBar: {
-    width: 3,
-  },
-  // Content sits to the right of the accent bar
-  cardInner: {
-    flex: 1,
-    padding: 16,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  cardLeft: { flex: 1, paddingRight: 8 },
-  label: {
-    fontWeight: '600',
-    fontSize: 17,
-    color: C.text1,
-    marginBottom: 3,
-  },
-  meta: {
-    fontWeight: '400',
-    fontSize: 12,
-    color: C.text3,
-  },
+  cardTint: { opacity: 0.07 },
+  cardContent: { padding: spacing.lg },
 
-  goalSection: { gap: 6 },
-  track: {
-    height: 5,
-    borderRadius: 3,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
-  fill: { height: '100%', borderRadius: 3 },
+  iconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitleCol: { flex: 1, gap: 3 },
+  label: { fontWeight: '700', fontSize: 18, color: colors.textPrimary },
+  meta: { ...type.meta },
+
+  cardTopRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  streakChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: spacing.sm, height: 24, borderRadius: radii.full, borderWidth: 1,
+  },
+  streakText: { fontFamily: fonts.mono, fontSize: 11 },
+
+  goalSection: { gap: spacing.sm },
   goalFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -485,27 +436,30 @@ const styles = StyleSheet.create({
   },
   goalNote: {
     fontWeight: '500',
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    color: colors.textSecondary,
   },
   goalPct: {
-    fontFamily: 'DMMono-Medium',
-    fontSize: 11,
+    fontFamily: fonts.mono,
+    fontSize: 13,
+    fontWeight: '600',
   },
 
-  noGoalRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  noGoalTime: {
-    fontWeight: '500',
-    fontSize: 12,
+  noGoalRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  ghostChip: {
     flex: 1,
-    color: 'rgba(255,255,255,0.5)',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingHorizontal: spacing.md, height: componentHeights.chip,
+    borderRadius: radii.full,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.divider,
   },
+  ghostChipText: { fontWeight: '500', fontSize: 11, color: colors.textMuted, flexShrink: 1 },
   setGoalChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    height: componentHeights.chip,
+    justifyContent: 'center',
+    borderRadius: radii.full,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  setGoalText: { fontWeight: '600', fontSize: 11 },
+  setGoalText: { fontWeight: '700', fontSize: 12 },
 });

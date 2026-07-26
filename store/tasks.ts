@@ -1,5 +1,6 @@
 import { supabase, getUserId } from '../utils/supabase';
 import type { Task } from '../types';
+import { PREVIEW, PREVIEW_TASKS } from '../utils/previewData';
 
 // Converts a raw Supabase row into the Task shape the rest of the app uses.
 // Main difference: weekly_goal_secs (snake_case DB) → weeklyGoalSecs (camelCase app)
@@ -14,6 +15,7 @@ function rowToTask(row: any): Task {
 }
 
 export async function getTasks(): Promise<Task[]> {
+  if (PREVIEW) return [...PREVIEW_TASKS];
   const userId = await getUserId();
   if (!userId) {
     console.warn('getTasks: no user session');

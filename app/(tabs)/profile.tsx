@@ -1,13 +1,20 @@
 import { useCallback, useState, useMemo } from 'react';
 import {
-  Alert, Animated, View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, Dimensions, TextInput, ActivityIndicator,
+  Alert, View, Text, StyleSheet,
+  Dimensions, TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../../constants/colors';
-import { useFadeIn } from '../../utils/useFadeIn';
+import { colors, spacing, radii, type } from '../../constants/theme';
+import { AppScreen } from '../../components/AppScreen';
+import { AppHeader } from '../../components/AppHeader';
+import { IconButton } from '../../components/IconButton';
+import { PrimaryButton } from '../../components/PrimaryButton';
+import { SecondaryButton } from '../../components/SecondaryButton';
+import { Avatar } from '../../components/Avatar';
+import { Metric, MetricDivider } from '../../components/Metric';
+import { EmptyState } from '../../components/EmptyState';
+import { ListDivider } from '../../components/ListDivider';
 import { getSessions } from '../../store/sessions';
 import { getTasks, lookupTask } from '../../store/tasks';
 import { getMyProfile, updateDisplayName, updateUsername } from '../../store/social';
@@ -15,10 +22,12 @@ import { formatDuration } from '../../utils/format';
 import type { Session, Task } from '../../types';
 
 // --- grid layout constants ---
+// Kept exactly as before (values intentionally literal, not tokens) since
+// they feed CELL_SIZE math and must not shift the heatmap layout.
 const NUM_WEEKS = 14;
 const CELL_GAP = 3;
 const SCREEN_W = Dimensions.get('window').width;
-const CONTENT_PAD = 20;
+const CONTENT_PAD = spacing.xl; // matches AppScreen's horizontal padding
 const CARD_PAD = 14;
 const DAY_COL_W = 14;
 const DAY_COL_GAP = 6;
@@ -69,10 +78,10 @@ function buildHeatmapGrid(sessions: Session[]): HeatCell[][] {
 
 function cellBg(mins: number, isToday: boolean, isFuture: boolean): string {
   if (isFuture) return 'transparent';
-  if (mins === 0) return isToday ? C.surface3 : 'rgba(255,255,255,0.05)';
-  if (mins < 30) return C.accent + '55';
-  if (mins < 60) return C.accent + '99';
-  return C.accent;
+  if (mins === 0) return isToday ? colors.surfaceActive : colors.divider;
+  if (mins < 30) return colors.accentPrimary + '55';
+  if (mins < 60) return colors.accentPrimary + '99';
+  return colors.accentPrimary;
 }
 
 function computeCurrentStreak(sessions: Session[]): number {
@@ -126,7 +135,6 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const fadeAnim = useFadeIn();
 
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -188,205 +196,162 @@ export default function ProfileScreen() {
   const groups     = useMemo(() => groupByDay(sessions), [sessions]);
 
   return (
-    <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <AppScreen>
+      <AppHeader
+        variant="large"
+        title="Profile"
+        right={<IconButton icon="settings-outline" onPress={() => router.push('/settings')} accessibilityLabel="Settings" />}
+      />
 
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Profile</Text>
-            <TouchableOpacity
-              style={styles.settingsBtn}
-              onPress={() => router.push('/settings')}
-              activeOpacity={0.75}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="settings-outline" size={22} color={C.text2} />
-            </TouchableOpacity>
-          </View>
+      {/* Profile header */}
+      <View style={styles.profileHeader}>
+        <Avatar name={displayName || 'Profile'} userId={username || displayName || 'me'} size={56} isMe />
 
-          {/* Profile card */}
-          <View style={styles.profileCard}>
-            {/* Avatar */}
-            <View style={styles.profileAvatar}>
-              <Text style={styles.profileInitials}>
-                {displayName
-                  ? displayName.trim().split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
-                  : '?'}
-              </Text>
+        {editing ? (
+          <View style={styles.profileEditFields}>
+            <TextInput
+              style={styles.profileEditInput}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Display name"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              returnKeyType="next"
+            />
+            <TextInput
+              style={styles.profileEditInput}
+              value={editUsername}
+              onChangeText={(t) => setEditUsername(t.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+              placeholder="username"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleSave}
+            />
+            <View style={styles.profileEditBtns}>
+              <SecondaryButton title="Cancel" onPress={() => setEditing(false)} compact style={styles.profileEditBtn} />
+              <PrimaryButton title="Save" onPress={handleSave} disabled={saving} loading={saving} compact style={styles.profileEditBtn} />
             </View>
+          </View>
+        ) : (
+          <View style={styles.profileInfo}>
+            <Text style={type.name}>{displayName || 'Set your name'}</Text>
+            <Text style={styles.profileUsername}>
+              {username ? `@${username}` : `@${displayName} · tap to set username`}
+            </Text>
+          </View>
+        )}
 
-            {editing ? (
-              <View style={styles.profileEditFields}>
-                <TextInput
-                  style={styles.profileEditInput}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Display name"
-                  placeholderTextColor={C.text3}
-                  autoFocus
-                  returnKeyType="next"
-                />
-                <TextInput
-                  style={styles.profileEditInput}
-                  value={editUsername}
-                  onChangeText={(t) => setEditUsername(t.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
-                  placeholder="username"
-                  placeholderTextColor={C.text3}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSave}
-                />
-                <View style={styles.profileEditBtns}>
-                  <TouchableOpacity
-                    style={styles.profileCancelBtn}
-                    onPress={() => setEditing(false)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={styles.profileCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.profileSaveBtn}
-                    onPress={handleSave}
-                    disabled={saving}
-                    activeOpacity={0.8}
-                  >
-                    {saving
-                      ? <ActivityIndicator color="#fff" size="small" />
-                      : <Text style={styles.profileSaveText}>Save</Text>
-                    }
-                  </TouchableOpacity>
-                </View>
+        {!editing && (
+          <IconButton icon="pencil-outline" size="sm" color={colors.textMuted} onPress={startEdit} accessibilityLabel="Edit profile" />
+        )}
+      </View>
+
+      {/* Stats */}
+      <View style={styles.statsRow}>
+        <Metric value={`${(totalSecs / 3600).toFixed(1)}h`} label="Total time" />
+        <MetricDivider />
+        <Metric value={String(sessions.length)} label="Sessions" />
+        <MetricDivider />
+        <Metric
+          value={streak > 0 ? `${streak}d` : '—'}
+          label="Streak"
+          valueColor={streak > 0 ? colors.warning : colors.textMuted}
+        />
+      </View>
+
+      {/* Activity heatmap + milestones */}
+      <Text style={styles.sectionLabel}>Activity</Text>
+      <View style={styles.card}>
+        <View style={styles.heatmapRow}>
+          {/* Day labels: M / W / F only to avoid crowding */}
+          <View style={{ width: DAY_COL_W, marginRight: DAY_COL_GAP, gap: CELL_GAP }}>
+            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((l, i) => (
+              <View key={i} style={{ height: CELL_SIZE, justifyContent: 'center' }}>
+                <Text style={styles.dayLabelText}>{i % 2 === 0 ? l : ''}</Text>
               </View>
-            ) : (
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{displayName || 'Set your name'}</Text>
-                <Text style={styles.profileUsername}>
-                  {username ? `@${username}` : `@${displayName} · tap to set username`}
-                </Text>
-              </View>
-            )}
-
-            {!editing && (
-              <TouchableOpacity
-                style={styles.profileEditBtn}
-                onPress={startEdit}
-                activeOpacity={0.75}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="pencil-outline" size={16} color={C.text3} />
-              </TouchableOpacity>
-            )}
+            ))}
           </View>
-
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{(totalSecs / 3600).toFixed(1)}h</Text>
-              <Text style={styles.statLabel}>Total Time</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{sessions.length}</Text>
-              <Text style={styles.statLabel}>Sessions</Text>
-            </View>
-            <View style={[styles.statCard, streak > 0 && styles.statCardFire]}>
-              <Text style={[styles.statValue, streak > 0 && { color: C.accent3 }]}>
-                {streak > 0 ? `${streak}d` : '—'}
-              </Text>
-              <Text style={styles.statLabel}>{streak > 0 ? 'Streak 🔥' : 'Streak'}</Text>
-            </View>
-          </View>
-
-          {/* Activity heatmap */}
-          <Text style={styles.sectionLabel}>Activity</Text>
-          <View style={styles.card}>
-            <View style={styles.heatmapRow}>
-              {/* Day labels: M / W / F only to avoid crowding */}
-              <View style={{ width: DAY_COL_W, marginRight: DAY_COL_GAP, gap: CELL_GAP }}>
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((l, i) => (
-                  <View key={i} style={{ height: CELL_SIZE, justifyContent: 'center' }}>
-                    <Text style={styles.dayLabelText}>{i % 2 === 0 ? l : ''}</Text>
-                  </View>
+          {/* Cells */}
+          <View style={{ flexDirection: 'row', gap: CELL_GAP }}>
+            {heatmap.map((week, wi) => (
+              <View key={wi} style={{ gap: CELL_GAP }}>
+                {week.map((cell, di) => (
+                  <View
+                    key={di}
+                    style={{
+                      width: CELL_SIZE,
+                      height: CELL_SIZE,
+                      borderRadius: 3,
+                      backgroundColor: cellBg(cell.mins, cell.isToday, cell.isFuture),
+                      ...(cell.isToday && { borderWidth: 1, borderColor: colors.textPrimary + '59' }),
+                    }}
+                  />
                 ))}
               </View>
-              {/* Cells */}
-              <View style={{ flexDirection: 'row', gap: CELL_GAP }}>
-                {heatmap.map((week, wi) => (
-                  <View key={wi} style={{ gap: CELL_GAP }}>
-                    {week.map((cell, di) => (
-                      <View
-                        key={di}
-                        style={{
-                          width: CELL_SIZE,
-                          height: CELL_SIZE,
-                          borderRadius: 3,
-                          backgroundColor: cellBg(cell.mins, cell.isToday, cell.isFuture),
-                          ...(cell.isToday && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }),
-                        }}
-                      />
-                    ))}
-                  </View>
-                ))}
-              </View>
-            </View>
-            {/* Legend */}
-            <View style={styles.legendRow}>
-              <Text style={styles.legendText}>Less</Text>
-              {(['rgba(255,255,255,0.05)', C.accent + '55', C.accent + '99', C.accent] as string[]).map((bg, i) => (
-                <View key={i} style={[styles.legendCell, { backgroundColor: bg }]} />
-              ))}
-              <Text style={styles.legendText}>More</Text>
-            </View>
+            ))}
           </View>
+        </View>
+        {/* Legend */}
+        <View style={styles.legendRow}>
+          <Text style={styles.legendText}>Less</Text>
+          {([colors.divider, colors.accentPrimary + '55', colors.accentPrimary + '99', colors.accentPrimary] as string[]).map((bg, i) => (
+            <View key={i} style={[styles.legendCell, { backgroundColor: bg }]} />
+          ))}
+          <Text style={styles.legendText}>More</Text>
+        </View>
 
-          {/* Milestones */}
-          <Text style={styles.sectionLabel}>Milestones</Text>
-          <View style={[styles.card, styles.milestonesInner]}>
-            <View style={styles.milestone}>
-              <Ionicons name="timer-outline" size={18} color={C.accent} />
-              <Text style={[styles.milestoneVal, { color: C.accent }]}>
-                {longestSecs > 0 ? formatDuration(longestSecs) : '—'}
-              </Text>
-              <Text style={styles.milestoneLabel}>Longest{'\n'}Session</Text>
-            </View>
-            <View style={styles.milestoneDiv} />
-            <View style={styles.milestone}>
-              <Ionicons name="flame-outline" size={18} color={C.accent3} />
-              <Text style={[styles.milestoneVal, { color: C.accent3 }]}>
-                {bestStreak > 0 ? `${bestStreak}d` : '—'}
-              </Text>
-              <Text style={styles.milestoneLabel}>Best{'\n'}Streak</Text>
-            </View>
-            <View style={styles.milestoneDiv} />
-            <View style={styles.milestone}>
-              <Ionicons name="calendar-outline" size={18} color={C.accent2} />
-              <Text style={[styles.milestoneVal, { color: C.accent2 }]}>
-                {studyDays > 0 ? String(studyDays) : '—'}
-              </Text>
-              <Text style={styles.milestoneLabel}>Study{'\n'}Days</Text>
-            </View>
+        {/* Milestones */}
+        <View style={styles.milestonesDivider}>
+          <ListDivider />
+        </View>
+        <View style={styles.milestonesInner}>
+          <View style={styles.milestone}>
+            <Ionicons name="timer-outline" size={16} color={colors.accentPrimary} />
+            <Text style={[styles.milestoneVal, { color: colors.accentPrimary }]}>
+              {longestSecs > 0 ? formatDuration(longestSecs) : '—'}
+            </Text>
+            <Text style={styles.milestoneLabel}>Longest{'\n'}session</Text>
           </View>
+          <View style={styles.milestoneDiv} />
+          <View style={styles.milestone}>
+            <Ionicons name="flame-outline" size={16} color={colors.warning} />
+            <Text style={[styles.milestoneVal, { color: colors.warning }]}>
+              {bestStreak > 0 ? `${bestStreak}d` : '—'}
+            </Text>
+            <Text style={styles.milestoneLabel}>Best{'\n'}streak</Text>
+          </View>
+          <View style={styles.milestoneDiv} />
+          <View style={styles.milestone}>
+            <Ionicons name="calendar-outline" size={16} color={colors.accentSecondary} />
+            <Text style={[styles.milestoneVal, { color: colors.accentSecondary }]}>
+              {studyDays > 0 ? String(studyDays) : '—'}
+            </Text>
+            <Text style={styles.milestoneLabel}>Study{'\n'}days</Text>
+          </View>
+        </View>
+      </View>
 
-          {/* Session Log */}
-          <Text style={styles.sectionLabel}>Session Log</Text>
+      {/* Session Log */}
+      <Text style={styles.sectionLabel}>Session Log</Text>
 
-          {groups.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Ionicons name="time-outline" size={32} color={C.text3} style={{ marginBottom: 10 }} />
-              <Text style={styles.emptyText}>No sessions yet. Start studying!</Text>
+      {groups.length === 0 ? (
+        <EmptyState icon="time-outline" title="No sessions yet" subtitle="Your study history will appear here." />
+      ) : (
+        groups.map((group) => (
+          <View key={group.key} style={styles.group}>
+            <View style={styles.dayHeader}>
+              <Text style={type.sectionTitle}>{group.label}</Text>
+              <Text style={styles.dayTotal}>{formatDuration(group.totalSecs)}</Text>
             </View>
-          ) : (
-            groups.map((group) => (
-              <View key={group.key} style={styles.group}>
-                <View style={styles.dayHeader}>
-                  <Text style={styles.dayLabel}>{group.label}</Text>
-                  <Text style={styles.dayTotal}>{formatDuration(group.totalSecs)}</Text>
-                </View>
-                {group.sessions.map((s) => {
-                  const task = lookupTask(tasks, s.subjectId);
-                  return (
-                    <View key={s.id} style={styles.sessionRow}>
+            <View style={styles.sessionList}>
+              {group.sessions.map((s, i) => {
+                const task = lookupTask(tasks, s.subjectId);
+                return (
+                  <View key={s.id}>
+                    {i > 0 && <ListDivider inset={CARD_PAD + 3} />}
+                    <View style={styles.sessionRow}>
                       <View style={[styles.colorBar, { backgroundColor: task.color }]} />
                       <View style={styles.rowMain}>
                         <View style={styles.rowTop}>
@@ -399,214 +364,125 @@ export default function ProfileScreen() {
                         ) : null}
                       </View>
                     </View>
-                  );
-                })}
-              </View>
-            ))
-          )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ))
+      )}
 
-        </ScrollView>
-      </SafeAreaView>
-    </Animated.View>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
-  scroll: { flex: 1 },
-  content: { padding: CONTENT_PAD, paddingBottom: 40 },
-
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 20,
-  },
-  title: { fontWeight: '700', fontSize: 32, color: C.text1 },
-  settingsBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center',
-  },
-
-  // Profile card
-  profileCard: {
+  // Profile header
+  profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.surface1,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 24,
-    gap: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  profileAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: C.accent + '33',
-    borderWidth: 2,
-    borderColor: C.accent + '66',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileInitials: {
-    fontWeight: '600',
-    fontSize: 18,
-    color: C.accent,
+    gap: spacing.md,
+    marginBottom: spacing.xxl,
+    paddingVertical: spacing.xs,
   },
   profileInfo: { flex: 1 },
-  profileName: {
-    fontWeight: '600',
-    fontSize: 17,
-    color: C.text1,
-    marginBottom: 2,
-  },
   profileUsername: {
-    fontWeight: '400',
-    fontSize: 13,
-    color: C.text3,
+    ...type.meta,
   },
-  profileEditBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: C.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileEditFields: { flex: 1, gap: 8 },
+  profileEditFields: { flex: 1, gap: spacing.sm },
   profileEditInput: {
-    backgroundColor: C.surface2,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     fontWeight: '400',
     fontSize: 14,
-    color: C.text1,
+    color: colors.textPrimary,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: colors.divider,
   },
   profileEditBtns: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 2,
+    gap: spacing.sm,
+    marginTop: spacing.xs / 2,
   },
-  profileCancelBtn: {
-    flex: 1,
-    backgroundColor: C.surface2,
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  profileCancelText: {
-    fontWeight: '500',
-    fontSize: 13,
-    color: C.text3,
-  },
-  profileSaveBtn: {
-    flex: 1,
-    backgroundColor: C.accent,
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  profileSaveText: {
-    fontWeight: '600',
-    fontSize: 13,
-    color: '#fff',
-  },
+  profileEditBtn: { flex: 1 },
 
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 28 },
-  statCard: {
-    flex: 1,
-    backgroundColor: C.surface1,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  statCardFire: { borderColor: 'rgba(247,167,108,0.28)' },
-  statValue: { fontWeight: '700', fontSize: 20, color: C.text1 },
-  statLabel: {
-    fontWeight: '500', fontSize: 10,
-    color: C.text3, marginTop: 3, textAlign: 'center',
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.xxxl,
+    paddingVertical: spacing.xl,
   },
 
   sectionLabel: {
-    fontWeight: '600', fontSize: 11, color: C.text3,
-    textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12,
+    ...type.sectionTitle,
+    marginBottom: spacing.md,
   },
 
   card: {
-    backgroundColor: C.surface1,
-    borderRadius: 16,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
     padding: CARD_PAD,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: C.border,
+    marginBottom: spacing.xxl + spacing.xs,
   },
 
   // heatmap
-  heatmapRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
+  heatmapRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.sm + 2 },
   dayLabelText: {
-    fontFamily: 'DMMono-Medium', fontSize: 9, color: C.text3, textAlign: 'right',
+    fontFamily: 'DMMono-Medium', fontSize: 9, color: colors.textMuted, textAlign: 'right',
   },
   legendRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xs,
   },
-  legendText: { fontWeight: '400', fontSize: 9, color: C.text3 },
+  legendText: { fontWeight: '400', fontSize: 9, color: colors.textMuted },
   legendCell: { width: 10, height: 10, borderRadius: 2 },
 
-  // milestones
+  // milestones (inside activity card)
+  milestonesDivider: {
+    marginHorizontal: -CARD_PAD,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md + 2,
+  },
   milestonesInner: { flexDirection: 'row', alignItems: 'stretch' },
-  milestone: { flex: 1, alignItems: 'center', gap: 5 },
+  milestone: { flex: 1, alignItems: 'center', gap: spacing.xs },
   milestoneDiv: {
     width: 1,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: colors.divider,
     alignSelf: 'stretch',
-    marginHorizontal: 4,
+    marginHorizontal: spacing.xs,
   },
-  milestoneVal: { fontFamily: 'DMMono-Medium', fontSize: 16, color: C.text1 },
+  milestoneVal: { fontFamily: 'DMMono-Medium', fontSize: 15, color: colors.textPrimary },
   milestoneLabel: {
-    fontWeight: '400', fontSize: 10, color: C.text3,
+    fontWeight: '400', fontSize: 10, color: colors.textMuted,
     textAlign: 'center', lineHeight: 14,
   },
 
-  // empty state
-  emptyCard: {
-    backgroundColor: C.surface1, borderRadius: 16, padding: 36, alignItems: 'center',
-  },
-  emptyText: { fontWeight: '400', fontSize: 14, color: C.text3 },
-
   // session log
-  group: { marginBottom: 24 },
+  group: { marginBottom: spacing.xxl },
   dayHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 8, paddingHorizontal: 2,
+    alignItems: 'center', marginBottom: spacing.sm, paddingHorizontal: 2,
   },
-  dayLabel: {
-    fontWeight: '500', fontSize: 11, color: C.text3,
-    textTransform: 'uppercase', letterSpacing: 0.6,
-  },
-  dayTotal: { fontFamily: 'DMMono-Medium', fontSize: 12, color: C.accent },
+  dayTotal: { fontFamily: 'DMMono-Medium', fontSize: 12, color: colors.accentPrimary },
 
-  sessionRow: {
-    flexDirection: 'row', backgroundColor: C.surface1,
-    borderRadius: 10, marginBottom: 5, overflow: 'hidden',
+  sessionList: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.md,
+    overflow: 'hidden',
   },
-  colorBar: { width: 3 },
-  rowMain: { flex: 1, paddingVertical: 10, paddingHorizontal: 12 },
+  sessionRow: {
+    flexDirection: 'row',
+  },
+  colorBar: { width: 3, alignSelf: 'stretch' },
+  rowMain: { flex: 1, paddingVertical: spacing.md - 1, paddingHorizontal: spacing.md },
   rowTop: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 2,
   },
-  taskName: { fontWeight: '500', fontSize: 13, color: C.text1 },
-  duration: { fontFamily: 'DMMono-Medium', fontSize: 12, color: C.accent },
-  time: { fontWeight: '400', fontSize: 11, color: C.text3, marginBottom: 1 },
+  taskName: { fontWeight: '500', fontSize: 13, color: colors.textPrimary },
+  duration: { fontFamily: 'DMMono-Medium', fontSize: 12, color: colors.accentPrimary },
+  time: { fontWeight: '400', fontSize: 11, color: colors.textMuted, marginBottom: 1 },
   note: {
-    fontWeight: '400', fontSize: 11, color: C.text3, marginTop: 2, lineHeight: 16,
+    fontWeight: '400', fontSize: 11, color: colors.textMuted, marginTop: 2, lineHeight: 16,
   },
 });

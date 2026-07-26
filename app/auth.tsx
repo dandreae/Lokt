@@ -7,53 +7,27 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../constants/colors';
+import { colors, spacing, radii, iconSizes, componentHeights, type } from '../constants/theme';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { supabase } from '../utils/supabase';
 
 export default function AuthScreen() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [username, setUsername] = useState('');
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
-
-  const passwordReqs = [
-    { label: 'At least 8 characters',  met: password.length >= 8 },
-    { label: 'Uppercase letter',        met: /[A-Z]/.test(password) },
-    { label: 'Lowercase letter',        met: /[a-z]/.test(password) },
-    { label: 'Number',                  met: /[0-9]/.test(password) },
-    { label: 'Special character',       met: /[^A-Za-z0-9]/.test(password) },
-  ];
-  const passwordStrong = passwordReqs.every((r) => r.met);
-
-  function switchMode(next: 'login' | 'signup') {
-    setMode(next);
-    setError('');
-  }
-
-  function cleanUsername(raw: string): string {
-    return raw.toLowerCase().replace(/[^a-z0-9_.]/g, '');
-  }
 
   async function handleSubmit() {
     setError('');
-
-    if (mode === 'signup') {
-      if (!username.trim()) { setError('Please choose a username.'); return; }
-      if (username.trim().length < 3) { setError('Username must be at least 3 characters.'); return; }
-      if (!passwordStrong) { setError('Please meet all password requirements.'); return; }
-    }
-
     if (!email.trim() || !password) {
       setError('Please fill in all fields.');
       return;
@@ -61,31 +35,15 @@ export default function AuthScreen() {
 
     setLoading(true);
     try {
-      if (mode === 'signup') {
-        const { error: e } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
-          password,
-          options: {
-            data: {
-              display_name: username.trim(),
-              username: cleanUsername(username),
-            },
-          },
-        });
-        if (e) throw e;
-      } else {
-        const { error: e } = await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
-          password,
-        });
-        if (e) throw e;
-      }
+      const { error: e } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (e) throw e;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Something went wrong. Try again.';
       if (msg.includes('Invalid login credentials')) {
         setError('Incorrect email or password.');
-      } else if (msg.includes('already registered')) {
-        setError('An account with this email already exists.');
       } else {
         setError(msg);
       }
@@ -112,58 +70,16 @@ export default function AuthScreen() {
             <Text style={styles.tagline}>Study with your people.</Text>
           </View>
 
-          {/* Mode tabs */}
-          <View style={styles.tabRow}>
-            <TouchableOpacity
-              style={[styles.tab, mode === 'login' && styles.tabActive]}
-              onPress={() => switchMode('login')}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>Log In</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, mode === 'signup' && styles.tabActive]}
-              onPress={() => switchMode('signup')}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Form */}
           <View style={styles.card}>
 
-            {mode === 'signup' && (
-              <>
-                <View style={styles.inputWrap}>
-                  <Text style={styles.atSign}>@</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="username"
-                    placeholderTextColor={C.text3}
-                    value={username}
-                    onChangeText={(t) => setUsername(cleanUsername(t))}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    returnKeyType="next"
-                    onSubmitEditing={() => emailRef.current?.focus()}
-                    editable={!loading}
-                  />
-                </View>
-                <Text style={styles.usernameHint}>
-                  This is how friends find you.
-                </Text>
-              </>
-            )}
-
             {/* Email */}
             <View style={styles.inputWrap}>
-              <Ionicons name="mail-outline" size={16} color={C.text3} />
+              <Ionicons name="mail-outline" size={iconSizes.sm} color={colors.textMuted} />
               <TextInput
-                ref={emailRef}
                 style={styles.input}
                 placeholder="Email"
-                placeholderTextColor={C.text3}
+                placeholderTextColor={colors.textMuted}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -176,12 +92,12 @@ export default function AuthScreen() {
 
             {/* Password */}
             <View style={styles.inputWrap}>
-              <Ionicons name="lock-closed-outline" size={16} color={C.text3} />
+              <Ionicons name="lock-closed-outline" size={iconSizes.sm} color={colors.textMuted} />
               <TextInput
                 ref={passwordRef}
                 style={[styles.input, { flex: 1 }]}
                 placeholder="Password"
-                placeholderTextColor={C.text3}
+                placeholderTextColor={colors.textMuted}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -195,63 +111,33 @@ export default function AuthScreen() {
               >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={16}
-                  color={C.text3}
+                  size={iconSizes.sm}
+                  color={colors.textMuted}
                 />
               </TouchableOpacity>
             </View>
 
-            {mode === 'signup' && password.length > 0 && (
-              <View style={styles.passwordReqs}>
-                {passwordReqs.map((req) => (
-                  <View key={req.label} style={styles.reqRow}>
-                    <Ionicons
-                      name={req.met ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={13}
-                      color={req.met ? C.accent2 : C.text3}
-                    />
-                    <Text style={[styles.reqText, req.met && styles.reqTextMet]}>
-                      {req.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
             {error ? (
               <View style={styles.errorWrap}>
-                <Ionicons name="alert-circle-outline" size={14} color={C.red} />
+                <Ionicons name="alert-circle-outline" size={iconSizes.sm} color={colors.destructive} />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
-            <TouchableOpacity
+            <PrimaryButton
+              title="Log In"
               onPress={handleSubmit}
-              activeOpacity={0.85}
-              disabled={loading}
+              loading={loading}
               style={styles.submitBtn}
-            >
-              <View style={styles.submitGradient}>
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitText}>
-                    {mode === 'login' ? 'Log In' : 'Create Account'}
-                  </Text>
-                )}
-              </View>
-            </TouchableOpacity>
+            />
 
           </View>
 
           {/* Footer switch */}
           <Text style={styles.footer}>
-            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-            <Text
-              style={styles.footerLink}
-              onPress={() => switchMode(mode === 'login' ? 'signup' : 'login')}
-            >
-              {mode === 'login' ? 'Sign up' : 'Log in'}
+            Don't have an account?{' '}
+            <Text style={styles.footerLink} onPress={() => router.push('/onboarding')}>
+              Sign up
             </Text>
           </Text>
 
@@ -262,153 +148,86 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1, backgroundColor: colors.backgroundPrimary },
 
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
-    paddingBottom: 40,
+    padding: spacing.xxl,
+    paddingBottom: spacing.section,
   },
 
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.section,
   },
   appName: {
     fontWeight: '700',
     fontSize: 42,
-    color: C.text1,
+    color: colors.textPrimary,
     letterSpacing: -1,
   },
   tagline: {
-    fontWeight: '400',
-    fontSize: 15,
-    color: C.text3,
-    marginTop: 4,
+    ...type.body,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
-
-  tabRow: {
-    flexDirection: 'row',
-    backgroundColor: C.surface2,
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  tabActive: { backgroundColor: C.surface3 },
-  tabText: { fontWeight: '500', fontSize: 14, color: C.text3 },
-  tabTextActive: { color: C.text1 },
 
   card: {
-    backgroundColor: C.surface1,
-    borderRadius: 20,
-    padding: 20,
-    gap: 12,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    gap: spacing.md,
     borderWidth: 1,
-    borderColor: C.border,
-    marginBottom: 20,
+    borderColor: colors.border,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
   },
 
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: C.surface2,
-    borderRadius: 12,
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    borderColor: colors.divider,
+    paddingHorizontal: spacing.md,
+    height: componentHeights.input,
   },
   input: {
     flex: 1,
-    fontWeight: '400',
-    fontSize: 15,
-    color: C.text1,
+    ...type.body,
     padding: 0,
-  },
-  atSign: {
-    fontWeight: '500',
-    fontSize: 15,
-    color: C.text3,
-  },
-  usernameHint: {
-    fontWeight: '400',
-    fontSize: 11,
-    color: C.text3,
-    marginTop: -4,
-    paddingHorizontal: 2,
-  },
-
-  passwordReqs: {
-    gap: 6,
-    paddingHorizontal: 2,
-  },
-  reqRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  reqText: {
-    fontWeight: '400',
-    fontSize: 12,
-    color: C.text3,
-  },
-  reqTextMet: {
-    color: C.accent2,
   },
 
   errorWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: C.red + '18',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    gap: spacing.sm,
+    backgroundColor: colors.destructive + '18',
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: C.red + '30',
+    borderColor: colors.destructive + '30',
   },
   errorText: {
-    fontWeight: '400',
-    fontSize: 13,
-    color: C.red,
+    ...type.meta,
+    color: colors.destructive,
     flex: 1,
   },
 
   submitBtn: {
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginTop: 4,
-  },
-  submitGradient: {
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: C.accent,
-  },
-  submitText: {
-    fontWeight: '600',
-    fontSize: 16,
-    color: '#fff',
+    marginTop: spacing.xs,
   },
 
   footer: {
-    fontWeight: '400',
-    fontSize: 13,
-    color: C.text3,
+    ...type.meta,
     textAlign: 'center',
   },
   footerLink: {
     fontWeight: '500',
-    color: C.accent,
+    color: colors.accentPrimary,
   },
 });

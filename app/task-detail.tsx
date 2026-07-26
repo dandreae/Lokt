@@ -11,10 +11,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../constants/colors';
+import { colors, spacing, radii, componentHeights, fonts, type } from '../constants/theme';
+import { AppHeader } from '../components/AppHeader';
+import { IconButton } from '../components/IconButton';
+import { SecondaryButton } from '../components/SecondaryButton';
+import { EmptyState } from '../components/EmptyState';
+import { ProgressBar } from '../components/ProgressBar';
+import { ListDivider } from '../components/ListDivider';
 import { getTasks, lookupTask, updateTask } from '../store/tasks';
 import { getSessions, deleteSession, getWeekSessions } from '../store/sessions';
-import { contrastText } from '../utils/color';
 import { formatDuration } from '../utils/format';
 import type { Task, Session } from '../types';
 
@@ -100,77 +105,65 @@ export default function TaskDetailScreen() {
   const weekSessions = getWeekSessions(allSessions).filter((s) => s.subjectId === taskId);
   const weekSecs = weekSessions.reduce((a, s) => a + s.secs, 0);
   const totalSecs = sessions.reduce((a, s) => a + s.secs, 0);
-  const fg = task ? contrastText(task.color) : C.text1;
-  const overlayBg = fg === '#ffffff' ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
   const hasGoal = task?.weeklyGoalSecs != null && task.weeklyGoalSecs > 0;
   const goalPct = hasGoal
     ? Math.min(Math.round((weekSecs / task!.weeklyGoalSecs!) * 100), 100)
     : 0;
+  const accentColor = task?.color ?? colors.accentPrimary;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Colored header */}
-      <View style={[styles.header, { backgroundColor: task?.color ?? C.surface1 }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={26} color={fg} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: fg }]}>{task?.label ?? '…'}</Text>
-          <Text style={[styles.headerSub, { color: fg, opacity: 0.75 }]}>
-            {formatDuration(totalSecs)} · {sessions.length} session{sessions.length !== 1 ? 's' : ''}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.startBtn, { backgroundColor: overlayBg }]}
-          onPress={() => setShowStartOptions((v) => !v)}
-          activeOpacity={0.75}
-        >
-          <Ionicons name={showStartOptions ? 'close' : 'play'} size={14} color={fg} />
-          <Text style={[styles.startBtnText, { color: fg }]}>
-            {showStartOptions ? 'Cancel' : 'Start'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundPrimary }} edges={['top', 'bottom']}>
+      <AppHeader
+        variant="bar"
+        title={task?.label ?? '…'}
+        subtitle={`${formatDuration(totalSecs)} · ${sessions.length} session${sessions.length !== 1 ? 's' : ''}`}
+        onBack={() => router.back()}
+        right={
+          <IconButton
+            icon={showStartOptions ? 'close' : 'play'}
+            onPress={() => setShowStartOptions((v) => !v)}
+            color={accentColor}
+            accessibilityLabel={showStartOptions ? 'Cancel' : 'Start'}
+          />
+        }
+      />
 
-      {/* Start options */}
-      {showStartOptions && (
-        <View style={styles.startOptions}>
-          <TouchableOpacity
-            style={styles.optionBtn}
-            onPress={() => {
-              setShowStartOptions(false);
-              router.push({ pathname: '/stopwatch', params: { subjectId: taskId } });
-            }}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="stopwatch-outline" size={22} color={C.accent} />
-            <View>
-              <Text style={styles.optionLabel}>Stopwatch</Text>
-              <Text style={styles.optionSub}>Free-form, stop when done</Text>
-            </View>
-          </TouchableOpacity>
-          <View style={styles.optionDivider} />
-          <TouchableOpacity
-            style={styles.optionBtn}
-            onPress={() => {
-              setShowStartOptions(false);
-              router.push({ pathname: '/timer', params: { subjectId: taskId } });
-            }}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="timer-outline" size={22} color={C.accent2} />
-            <View>
-              <Text style={styles.optionLabel}>Timer</Text>
-              <Text style={styles.optionSub}>Count down from a set time</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      )}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
 
-      <ScrollView contentContainerStyle={styles.content}>
+        {/* Start options */}
+        {showStartOptions && (
+          <View style={styles.startOptions}>
+            <TouchableOpacity
+              style={styles.optionBtn}
+              onPress={() => {
+                setShowStartOptions(false);
+                router.push({ pathname: '/timer', params: { subjectId: taskId, mode: 'stopwatch' } });
+              }}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="stopwatch-outline" size={22} color={colors.accentPrimary} />
+              <View>
+                <Text style={styles.optionLabel}>Stopwatch</Text>
+                <Text style={styles.optionSub}>Free-form, stop when done</Text>
+              </View>
+            </TouchableOpacity>
+            <ListDivider />
+            <TouchableOpacity
+              style={styles.optionBtn}
+              onPress={() => {
+                setShowStartOptions(false);
+                router.push({ pathname: '/timer', params: { subjectId: taskId, mode: 'timer' } });
+              }}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="timer-outline" size={22} color={colors.accentSecondary} />
+              <View>
+                <Text style={styles.optionLabel}>Timer</Text>
+                <Text style={styles.optionSub}>Count down from a set time</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Weekly Goal Section */}
         <View style={styles.goalCard}>
@@ -188,18 +181,16 @@ export default function TaskDetailScreen() {
 
           {!editingGoal && hasGoal && (
             <>
-              <Text style={styles.goalValue}>
-                {formatDuration(weekSecs)}
+              <View style={styles.goalValueRow}>
+                <Text style={styles.goalValue}>{formatDuration(weekSecs)}</Text>
                 <Text style={styles.goalValueDim}> / {formatDuration(task!.weeklyGoalSecs!)} this week</Text>
-              </Text>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${goalPct}%` }]} />
               </View>
+              <ProgressBar progress={goalPct / 100} color={accentColor} height={6} />
               <View style={styles.goalFooter}>
                 <Text style={styles.goalNote}>
                   {getGoalNote(goalPct, weekSecs, task!.weeklyGoalSecs!)}
                 </Text>
-                <Text style={styles.goalPct}>{goalPct}%</Text>
+                <Text style={[styles.goalPct, { color: accentColor }]}>{goalPct}%</Text>
               </View>
             </>
           )}
@@ -236,7 +227,7 @@ export default function TaskDetailScreen() {
                 <TextInput
                   style={styles.customInput}
                   placeholder="Custom (hours)"
-                  placeholderTextColor={C.text3}
+                  placeholderTextColor={colors.textMuted}
                   value={customGoalInput}
                   onChangeText={setCustomGoalInput}
                   keyboardType="decimal-pad"
@@ -248,9 +239,7 @@ export default function TaskDetailScreen() {
                 </TouchableOpacity>
               </View>
               {hasGoal && (
-                <TouchableOpacity onPress={handleRemoveGoal} activeOpacity={0.7}>
-                  <Text style={styles.removeGoalText}>Remove goal</Text>
-                </TouchableOpacity>
+                <SecondaryButton title="Remove goal" onPress={handleRemoveGoal} destructive compact />
               )}
             </View>
           )}
@@ -259,29 +248,32 @@ export default function TaskDetailScreen() {
         {/* Sessions */}
         <Text style={styles.sectionTitle}>Sessions</Text>
         {sessions.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="time-outline" size={32} color={C.text3} style={{ marginBottom: 10 }} />
-            <Text style={styles.emptyText}>No sessions yet. Hit Start to begin.</Text>
-          </View>
+          <EmptyState icon="time-outline" title="No sessions yet" subtitle="Hit Start to begin." />
         ) : (
-          sessions.map((s) => (
-            <View key={s.id} style={styles.row}>
-              <View style={styles.rowMain}>
-                <Text style={styles.rowDate}>{formatDateTime(s.ts)}</Text>
-                {s.note ? (
-                  <Text style={styles.rowNote}>{s.note}</Text>
-                ) : null}
+          <View style={styles.sessionList}>
+            {sessions.map((s, i) => (
+              <View key={s.id}>
+                {i > 0 && <ListDivider />}
+                <View style={styles.row}>
+                  <View style={[styles.rowAccent, { backgroundColor: accentColor }]} />
+                  <View style={styles.rowMain}>
+                    <Text style={styles.rowDate}>{formatDateTime(s.ts)}</Text>
+                    {s.note ? (
+                      <Text style={styles.rowNote}>{s.note}</Text>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.duration, { color: accentColor }]}>{formatDuration(s.secs)}</Text>
+                  <IconButton
+                    icon="trash-outline"
+                    onPress={() => handleDeleteSession(s.id)}
+                    size="sm"
+                    color={colors.textMuted}
+                    accessibilityLabel="Delete session"
+                  />
+                </View>
               </View>
-              <Text style={styles.duration}>{formatDuration(s.secs)}</Text>
-              <TouchableOpacity
-                onPress={() => handleDeleteSession(s.id)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={styles.deleteBtn}
-              >
-                <Ionicons name="trash-outline" size={15} color={C.text3} />
-              </TouchableOpacity>
-            </View>
-          ))
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -289,135 +281,103 @@ export default function TaskDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
-  headerCenter: { flex: 1 },
-  headerTitle: { fontWeight: '600', fontSize: 18 },
-  headerSub: { fontWeight: '400', fontSize: 12, marginTop: 2 },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-  },
-  startBtnText: { fontWeight: '600', fontSize: 13 },
+  content: { padding: spacing.xl, paddingBottom: spacing.section },
 
   startOptions: {
-    backgroundColor: C.surface1,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    paddingHorizontal: 20,
-    paddingVertical: 4,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
   optionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
+    gap: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  optionLabel: { fontWeight: '600', fontSize: 15, color: C.text1 },
-  optionSub: { fontWeight: '400', fontSize: 12, color: C.text2, marginTop: 1 },
-  optionDivider: { height: 1, backgroundColor: C.border },
-
-  content: { padding: 20, paddingBottom: 40 },
+  optionLabel: { fontWeight: '600', fontSize: 15, color: colors.textPrimary },
+  optionSub: { ...type.meta, marginTop: 1 },
 
   goalCard: {
-    backgroundColor: C.surface1,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    gap: 10,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xxl,
+    gap: spacing.md,
   },
   goalCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  goalCardTitle: { fontWeight: '600', fontSize: 14, color: C.text1 },
-  goalEditLink: { fontWeight: '500', fontSize: 13, color: C.accent },
+  goalCardTitle: { fontWeight: '600', fontSize: 14, color: colors.textPrimary },
+  goalEditLink: { fontWeight: '500', fontSize: 13, color: colors.accentPrimary },
 
-  goalValue: { fontWeight: '700', fontSize: 22, color: C.text1 },
-  goalValueDim: { fontWeight: '400', fontSize: 14, color: C.text2 },
-
-  progressTrack: { height: 6, backgroundColor: C.surface3, borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: C.accent, borderRadius: 3 },
+  goalValueRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  goalValue: { fontFamily: fonts.mono, fontSize: 22, color: colors.textPrimary },
+  goalValueDim: { fontWeight: '400', fontSize: 14, color: colors.textSecondary },
 
   goalFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  goalNote: { fontWeight: '400', fontSize: 12, color: C.text3 },
-  goalPct: { fontFamily: 'DMMono-Medium', fontSize: 12, color: C.accent },
+  goalNote: { ...type.meta },
+  goalPct: { fontFamily: fonts.mono, fontSize: 12 },
 
-  noGoalText: { fontWeight: '400', fontSize: 13, color: C.text3 },
+  noGoalText: { fontWeight: '400', fontSize: 13, color: colors.textMuted },
 
-  goalEditor: { gap: 10 },
-  presetRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  goalEditor: { gap: spacing.md },
+  presetRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   presetBtn: {
-    paddingHorizontal: 14,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: C.surface2,
+    paddingHorizontal: spacing.lg,
+    height: componentHeights.chip,
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceSunken,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  presetBtnActive: { backgroundColor: C.accent + '33', borderColor: C.accent },
-  presetText: { fontWeight: '500', fontSize: 13, color: C.text2 },
-  presetTextActive: { color: C.accent },
-  customRow: { flexDirection: 'row', gap: 8 },
+  presetBtnActive: { backgroundColor: colors.accentPrimary + '33', borderColor: colors.accentPrimary },
+  presetText: { fontWeight: '500', fontSize: 13, color: colors.textSecondary },
+  presetTextActive: { color: colors.accentPrimary },
+  customRow: { flexDirection: 'row', gap: spacing.sm },
   customInput: {
     flex: 1,
-    height: 40,
-    backgroundColor: C.surface2,
-    borderRadius: 10,
+    height: componentHeights.buttonCompact,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 12,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
     fontWeight: '400',
     fontSize: 14,
-    color: C.text1,
+    color: colors.textPrimary,
   },
   customSetBtn: {
-    backgroundColor: C.surface2,
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: C.border,
-    height: 40,
+    borderColor: colors.border,
+    height: componentHeights.buttonCompact,
   },
-  customSetText: { fontWeight: '600', fontSize: 13, color: C.text1 },
-  removeGoalText: { fontWeight: '500', fontSize: 12, color: C.red, textAlign: 'center' },
+  customSetText: { fontWeight: '600', fontSize: 13, color: colors.textPrimary },
 
-  sectionTitle: { fontWeight: '600', fontSize: 15, color: C.text1, marginBottom: 10 },
+  sectionTitle: { ...type.sectionTitle, marginBottom: spacing.md },
 
-  emptyCard: {
-    backgroundColor: C.surface1,
-    borderRadius: 16,
-    padding: 36,
-    alignItems: 'center',
+  sessionList: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
   },
-  emptyText: { fontWeight: '400', fontSize: 14, color: C.text3 },
-
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.surface1,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
+  rowAccent: { width: 3, height: 28, borderRadius: 1.5, marginRight: spacing.md },
   rowMain: { flex: 1 },
-  rowDate: { fontWeight: '600', fontSize: 14, color: C.text1 },
-  rowNote: { fontWeight: '400', fontSize: 12, color: C.text2, marginTop: 3 },
-  duration: { fontFamily: 'DMMono-Medium', fontSize: 14, color: C.accent },
-  deleteBtn: { marginLeft: 12 },
+  rowDate: { fontWeight: '600', fontSize: 14, color: colors.textPrimary },
+  rowNote: { ...type.meta, marginTop: 3 },
+  duration: { fontFamily: fonts.mono, fontSize: 14, marginRight: spacing.xs },
 });

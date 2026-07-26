@@ -2,21 +2,35 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
   Animated,
   Easing,
-  ActivityIndicator,
+  StyleSheet,
   Alert,
+  Share,
+  Modal,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { C } from '../../constants/colors';
-import { useFadeIn } from '../../utils/useFadeIn';
-import { supabase } from '../../utils/supabase';
+import { colors, spacing, radii, iconSizes, shadows, type } from '../../constants/theme';
+import { supabase, generateId } from '../../utils/supabase';
+import { formatStudyTime } from '../../utils/format';
+import { AppScreen } from '../../components/AppScreen';
+import { AppHeader } from '../../components/AppHeader';
+import { IconButton } from '../../components/IconButton';
+import { PrimaryButton } from '../../components/PrimaryButton';
+import { SegmentedControl } from '../../components/SegmentedControl';
+import { EmptyState } from '../../components/EmptyState';
+import { LoadingState } from '../../components/LoadingState';
+import { Avatar } from '../../components/Avatar';
+import { LeaderboardRow } from '../../components/LeaderboardRow';
+import { ListDivider } from '../../components/ListDivider';
 import {
   getLeaderboard,
   getPendingRequests,
@@ -37,43 +51,26 @@ import {
   type SearchResult,
   type School,
 } from '../../store/social';
+import {
+  getMyGroups,
+  getPendingGroupInvites,
+  acceptInvite,
+  declineInvite,
+  joinByInviteCode,
+  type GroupSummary,
+  type GroupInvite,
+} from '../../store/groups';
 
-const GOLD = '#d4b840';
-
-const AVATAR_COLORS = [
-  '#7c6ff7', '#6cb4f7', '#5ee8b0', '#f7a76c',
-  '#f7d96c', '#f76cbf', '#f76c6c', '#5ee8e8',
-];
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(' ').filter(Boolean);
-  if (parts.length === 0) return '??';
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function getAvatarColor(userId: string): string {
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function formatMins(mins: number): string {
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
+// Accent for the "invite" affordances (header icon, promo card, add-friend
+// modal) — blue, pairing with the green used elsewhere on this screen for
+// the same blue-to-green "premium" identity used on the Timer screen.
+const INVITE_TINT = colors.focus;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Friend = {
   id: string;
   name: string;
-  initials: string;
-  avatarColor: string;
   weeklyMins: number;
   isLive: boolean;
   isMe?: boolean;
@@ -83,8 +80,6 @@ function entryToFriend(e: LeaderboardEntry): Friend {
   return {
     id: e.user_id,
     name: e.display_name ?? 'Unknown',
-    initials: getInitials(e.display_name ?? '?'),
-    avatarColor: e.is_me ? C.accent : getAvatarColor(e.user_id),
     weeklyMins: Math.round(e.weekly_secs / 60),
     isLive: e.is_studying,
     isMe: e.is_me,
@@ -92,8 +87,11 @@ function entryToFriend(e: LeaderboardEntry): Friend {
 }
 
 // ─── LiveDot ──────────────────────────────────────────────────────────────────
+// Small pulsing dot used only by the "Studying Together" banner's LIVE badge.
+// (The leaderboard rows themselves get their live indicator from Avatar/
+// LeaderboardRow now — this local component is banner-only.)
 
-function LiveDot({ color = C.red }: { color?: string }) {
+function LiveDot({ color = colors.destructive }: { color?: string }) {
   const opacity = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     Animated.loop(
@@ -137,11 +135,8 @@ function StudyingTogetherBanner({ liveFriends }: { liveFriends: Friend[] }) {
       <Animated.View style={[StyleSheet.absoluteFill, styles.togetherCardBg, { opacity: bgOpacity }]} pointerEvents="none" />
       <View style={styles.togetherAvatarStack}>
         {liveFriends.slice(0, 3).map((f, i) => (
-          <View
-            key={f.id}
-            style={[styles.togetherAvatar, { backgroundColor: f.avatarColor + '33', borderColor: C.bg, zIndex: 3 - i, marginLeft: i === 0 ? 0 : -10 }]}
-          >
-            <Text style={[styles.togetherInitials, { color: f.avatarColor }]}>{f.initials}</Text>
+          <View key={f.id} style={[styles.togetherAvatarRing, { zIndex: 3 - i, marginLeft: i === 0 ? 0 : -10 }]}>
+            <Avatar name={f.name} userId={f.id} size={28} />
           </View>
         ))}
       </View>
@@ -150,130 +145,9 @@ function StudyingTogetherBanner({ liveFriends }: { liveFriends: Friend[] }) {
         <Text style={styles.togetherSub}>studying together right now</Text>
       </View>
       <View style={styles.togetherLive}>
-        <LiveDot color={C.accent2} />
+        <LiveDot color={colors.accentSecondary} />
         <Text style={styles.togetherLiveText}>LIVE</Text>
       </View>
-    </Animated.View>
-  );
-}
-
-// ─── FriendRow ────────────────────────────────────────────────────────────────
-
-function FriendRow({ f, rank, maxMins, gapToNext }: {
-  f: Friend;
-  rank: number;
-  maxMins: number;
-  gapToNext: number | null;
-}) {
-  const isFirst = rank === 1;
-  const mountAnim = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0.2)).current;
-  const goldBreath = useRef(new Animated.Value(0)).current;
-  const barAnim = useRef(new Animated.Value(0)).current;
-
-  const pct = maxMins > 0 ? f.weeklyMins / maxMins : 0;
-  const showGap = gapToNext !== null && gapToNext > 0 && gapToNext <= (f.isMe ? 180 : 60);
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.delay(rank * 55),
-      Animated.parallel([
-        Animated.spring(mountAnim, { toValue: 1, useNativeDriver: true, tension: 65, friction: 12 }),
-        Animated.timing(barAnim, { toValue: pct, duration: 700, delay: rank * 55 + 300, useNativeDriver: false, easing: Easing.out(Easing.cubic) }),
-      ]),
-    ]).start();
-
-    if (f.isLive) {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, { toValue: 0.9, duration: 1100, useNativeDriver: true }),
-          Animated.timing(glowAnim, { toValue: 0.2, duration: 1100, useNativeDriver: true }),
-        ])
-      );
-      loop.start();
-      return () => loop.stop();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isFirst) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(goldBreath, { toValue: 1, duration: 3200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-        Animated.timing(goldBreath, { toValue: 0, duration: 3200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [isFirst]);
-
-  const translateY = mountAnim.interpolate({ inputRange: [0, 1], outputRange: [22, 0] });
-  const goldOverlayOpacity = goldBreath.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.07] });
-  const barWidth = barAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-
-  function rankLabel(r: number): string {
-    if (r === 1) return '1';
-    if (r === 2) return '2';
-    if (r === 3) return '3';
-    return `${r}`;
-  }
-
-  return (
-    <Animated.View style={[
-      styles.row,
-      f.isMe && styles.rowMe,
-      isFirst && styles.rowFirst,
-      { opacity: mountAnim, transform: [{ translateY }] },
-    ]}>
-      {isFirst && (
-        <Animated.View style={[StyleSheet.absoluteFill, styles.goldOverlay, { opacity: goldOverlayOpacity }]} pointerEvents="none" />
-      )}
-
-      <View style={styles.rankCol}>
-        <Text style={[styles.rank, isFirst && styles.rankFirst]}>#{rankLabel(rank)}</Text>
-      </View>
-
-      <View style={styles.avatarWrap}>
-        {f.isLive && (
-          <Animated.View style={[styles.avatarGlow, { borderColor: f.avatarColor, opacity: glowAnim }]} />
-        )}
-        <View style={[styles.avatar, { backgroundColor: f.avatarColor + '33' }]}>
-          <Text style={[styles.initials, { color: f.avatarColor }]}>{f.initials}</Text>
-        </View>
-      </View>
-
-      <View style={styles.info}>
-        <View style={styles.nameRow}>
-          <Text style={[styles.name, f.isMe && styles.nameMe]}>{f.name}</Text>
-          {isFirst && !f.isMe && (
-            <View style={styles.leaderBadge}>
-              <Text style={styles.leaderText}>LEADER</Text>
-            </View>
-          )}
-          {f.isLive && (
-            <View style={styles.liveChip}>
-              <LiveDot />
-              <Text style={styles.liveText}>Studying now</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, { width: barWidth, backgroundColor: f.isMe ? C.accent : f.avatarColor }]} />
-        </View>
-
-        <View style={styles.metaRow}>
-          {showGap && (
-            <Text style={[styles.gapText, f.isMe && styles.gapTextMe]}>
-              {formatMins(gapToNext!)} to catch up
-            </Text>
-          )}
-        </View>
-      </View>
-
-      <Text style={[styles.duration, f.isMe && styles.durationMe]}>
-        {formatMins(f.weeklyMins)}
-      </Text>
     </Animated.View>
   );
 }
@@ -281,15 +155,17 @@ function FriendRow({ f, rank, maxMins, gapToNext }: {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function FriendsScreen() {
-  const fadeAnim = useFadeIn();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
-  const [activeTab, setActiveTab] = useState<'friends' | 'school'>('friends');
+  const [activeTab, setActiveTab] = useState<'friends' | 'school' | 'groups'>('friends');
 
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pending, setPending] = useState<PendingRequest[]>([]);
   const [profile, setProfile] = useState<{ display_name: string; username: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [showAddFriend, setShowAddFriend] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -304,6 +180,11 @@ export default function FriendsScreen() {
   const [schoolSearchLoading, setSchoolSearchLoading] = useState(false);
   const [joiningSchool, setJoiningSchool] = useState<string | null>(null);
 
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
+  const [groupInvites, setGroupInvites] = useState<GroupInvite[]>([]);
+  const [joinCode, setJoinCode] = useState('');
+  const [joiningByCode, setJoiningByCode] = useState(false);
+
   type VerifyStep =
     | null
     | { step: 'email'; school: School }
@@ -314,6 +195,12 @@ export default function FriendsScreen() {
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyError, setVerifyError] = useState('');
 
+
+  async function loadGroups() {
+    const [g, inv] = await Promise.all([getMyGroups(), getPendingGroupInvites()]);
+    setGroups(g);
+    setGroupInvites(inv);
+  }
 
   async function loadLeaderboard() {
     const lb = await getLeaderboard();
@@ -336,6 +223,7 @@ export default function FriendsScreen() {
   useFocusEffect(useCallback(() => {
     loadAll();
     loadSchool();
+    loadGroups();
   }, []));
 
   async function loadSchool() {
@@ -434,9 +322,11 @@ export default function FriendsScreen() {
 
   // Real-time: re-fetch leaderboard whenever anyone's presence changes.
   // This is what makes the live dots update instantly without refreshing.
+  // Channel name is unique per mount to avoid colliding with a previous
+  // instance's subscription of the same fixed topic name.
   useEffect(() => {
     const channel = supabase
-      .channel('presence-changes')
+      .channel(`presence-changes-${generateId()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'presence' },
@@ -491,703 +381,695 @@ export default function FriendsScreen() {
   const sorted = [...friends].sort((a, b) => b.weeklyMins - a.weeklyMins);
   const maxMins = sorted[0]?.weeklyMins ?? 1;
   const liveFriends = friends.filter((f) => f.isLive && !f.isMe);
+  const schoolMaxMins = schoolFriends[0]?.weeklyMins ?? 1;
+  const addFriendNoResults = searchQuery.trim().length > 1 && !searchLoading && searchResults.length === 0;
 
   return (
-    <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.title}>Friends</Text>
-
-          {/* ── Tab switcher ── */}
-          <View style={styles.tabRow}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'friends' && styles.tabActive]}
-              onPress={() => setActiveTab('friends')}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.tabText, activeTab === 'friends' && styles.tabTextActive]}>
-                Friends
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'school' && styles.tabActive]}
-              onPress={() => setActiveTab('school')}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.tabText, activeTab === 'school' && styles.tabTextActive]}>
-                School
-              </Text>
-            </TouchableOpacity>
+    <AppScreen>
+      <AppHeader
+        variant="large"
+        title="Friends"
+        right={
+          <View style={styles.headerActions}>
+            <IconButton
+              icon="person-add"
+              onPress={() => setShowAddFriend(true)}
+              size="sm"
+              color={INVITE_TINT}
+              filled
+              accessibilityLabel="Add a friend"
+            />
+            <IconButton
+              icon="people"
+              onPress={() => setActiveTab('groups')}
+              size="sm"
+              color={colors.accentPrimary}
+              filled
+              accessibilityLabel="View groups"
+            />
           </View>
+        }
+      />
 
-          {activeTab === 'friends' ? (
+      <View style={styles.segmentWrap}>
+        <SegmentedControl
+          options={[
+            { value: 'friends', label: 'Friends' },
+            { value: 'school', label: 'School' },
+            { value: 'groups', label: 'Groups' },
+          ]}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
+      </View>
+
+      {activeTab === 'friends' ? (
+        <>
+          {/* ── Pending requests ── */}
+          {pending.length > 0 && (
+            <View style={styles.pendingCard}>
+              <Text style={styles.cardTitle}>Friend Requests</Text>
+              {pending.map((req) => (
+                <View key={req.id} style={styles.pendingRow}>
+                  <Avatar name={req.display_name} userId={req.requester_id} size={40} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rowName}>{req.display_name}</Text>
+                    {req.username && <Text style={styles.rowMeta}>@{req.username}</Text>}
+                  </View>
+                  <PrimaryButton title="Accept" onPress={() => handleRespond(req.id, true)} compact />
+                  <IconButton
+                    icon="close"
+                    onPress={() => handleRespond(req.id, false)}
+                    size="sm"
+                    color={colors.textMuted}
+                    accessibilityLabel="Decline friend request"
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ── Studying together banner ── */}
+          {liveFriends.length >= 2 && (
+            <StudyingTogetherBanner liveFriends={liveFriends} />
+          )}
+
+          {/* ── Friends leaderboard ── */}
+          {loading ? (
+            <LoadingState />
+          ) : sorted.length === 0 ? (
+            <EmptyState
+              icon="people-outline"
+              title="No one here yet"
+              subtitle="Tap the add-friend icon above to see how you compare."
+            />
+          ) : (
+            <View style={styles.leaderboardSurface}>
+              {sorted.map((f, i) => (
+                <View key={f.id}>
+                  {i > 0 && <ListDivider />}
+                  <LeaderboardRow
+                    userId={f.id}
+                    name={f.name}
+                    value={formatStudyTime(f.weeklyMins * 60)}
+                    rank={i + 1}
+                    isMe={f.isMe}
+                    isLive={f.isLive}
+                    progress={maxMins > 0 ? f.weeklyMins / maxMins : 0}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ── Invite promo ── */}
+          <View style={styles.invitePromo}>
+            <View style={[styles.invitePromoIcon, { backgroundColor: INVITE_TINT + '22' }]}>
+              <Ionicons name="people-circle" size={30} color={INVITE_TINT} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.invitePromoTitle}>Study together. Grow together.</Text>
+              <Text style={styles.invitePromoSub}>Invite friends to keep your streak going.</Text>
+            </View>
+            <PrimaryButton
+              title="Invite"
+              compact
+              color={INVITE_TINT}
+              onPress={() => Share.share({ message: 'Are you Lokt in? Download and find out.' })}
+            />
+          </View>
+        </>
+      ) : activeTab === 'school' ? (
+        <>
+          {/* ── School tab ── */}
+          {mySchool ? (
             <>
-              {/* ── Pending requests ── */}
-              {pending.length > 0 && (
-                <View style={styles.pendingCard}>
-                  <Text style={styles.pendingTitle}>Friend Requests</Text>
-                  {pending.map((req) => (
-                    <View key={req.id} style={styles.pendingRow}>
-                      <View style={styles.pendingAvatar}>
-                        <Text style={styles.pendingInitials}>
-                          {getInitials(req.display_name)}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.pendingName}>{req.display_name}</Text>
-                        {req.username && (
-                          <Text style={styles.pendingUsername}>@{req.username}</Text>
-                        )}
-                      </View>
-                      <TouchableOpacity
-                        style={styles.acceptBtn}
-                        onPress={() => handleRespond(req.id, true)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.acceptBtnText}>Accept</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.declineBtn}
-                        onPress={() => handleRespond(req.id, false)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="close" size={16} color={C.text3} />
-                      </TouchableOpacity>
+              {/* School header */}
+              <View style={styles.schoolHeader}>
+                <View style={styles.schoolInfo}>
+                  <Ionicons name="school-outline" size={iconSizes.sm} color={colors.accentSecondary} />
+                  <Text style={styles.schoolName}>{mySchool.name}</Text>
+                </View>
+                <TouchableOpacity onPress={handleLeaveSchool} activeOpacity={0.75}>
+                  <Text style={styles.leaveText}>Leave</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* School leaderboard */}
+              {schoolLoading ? (
+                <LoadingState />
+              ) : schoolFriends.length === 0 ? (
+                <EmptyState
+                  icon="school-outline"
+                  title="Just you so far"
+                  subtitle="Share the app with classmates to build the leaderboard."
+                />
+              ) : (
+                <View style={styles.leaderboardSurface}>
+                  {schoolFriends.map((f, i) => (
+                    <View key={f.id}>
+                      {i > 0 && <ListDivider />}
+                      <LeaderboardRow
+                        userId={f.id}
+                        name={f.name}
+                        value={formatStudyTime(f.weeklyMins * 60)}
+                        rank={i + 1}
+                        isMe={f.isMe}
+                        isLive={f.isLive}
+                        progress={schoolMaxMins > 0 ? f.weeklyMins / schoolMaxMins : 0}
+                      />
                     </View>
                   ))}
                 </View>
               )}
-
-              {/* ── Studying together banner ── */}
-              {liveFriends.length >= 2 && (
-                <StudyingTogetherBanner liveFriends={liveFriends} />
-              )}
-
-              {/* ── Friends leaderboard ── */}
-              {loading ? (
-                <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />
-              ) : sorted.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>No one here yet</Text>
-                  <Text style={styles.emptySub}>Add friends below to see how you compare.</Text>
-                </View>
-              ) : (
-                sorted.map((f, i) => (
-                  <FriendRow
-                    key={f.id}
-                    f={f}
-                    rank={i + 1}
-                    maxMins={maxMins}
-                    gapToNext={i > 0 ? sorted[i - 1].weeklyMins - f.weeklyMins : null}
-                  />
-                ))
-              )}
-
-              {/* ── Add Friend ── */}
-              <View style={styles.addCard}>
-                <Text style={styles.addTitle}>Add a Friend</Text>
-                {(profile?.username || profile?.display_name) && (
-                  <Text style={styles.addYourUsername}>
-                    Your username: <Text style={{ color: C.accent }}>@{profile.username || profile.display_name}</Text>
-                  </Text>
-                )}
-                <View style={styles.addRow}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Search by username or name"
-                    placeholderTextColor={C.text3}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  {searchLoading && (
-                    <ActivityIndicator color={C.accent} style={{ marginLeft: 8 }} />
-                  )}
-                </View>
-                {searchResults.length > 0 && (
-                  <View style={styles.searchResults}>
-                    {searchResults.map((r) => {
-                      const alreadySent = sentTo.has(r.id);
-                      const isSending = sendingTo === r.id;
-                      return (
-                        <View key={r.id} style={styles.searchRow}>
-                          <View style={[styles.searchAvatar, { backgroundColor: getAvatarColor(r.id) + '33' }]}>
-                            <Text style={[styles.searchInitials, { color: getAvatarColor(r.id) }]}>
-                              {getInitials(r.display_name ?? '')}
-                            </Text>
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.searchName}>{r.display_name}</Text>
-                            {r.username && <Text style={styles.searchUsername}>@{r.username}</Text>}
-                          </View>
-                          <TouchableOpacity
-                            style={[styles.addBtn, alreadySent && styles.addBtnSent]}
-                            onPress={() => !alreadySent && handleSendRequest(r.id)}
-                            disabled={alreadySent || isSending}
-                            activeOpacity={0.8}
-                          >
-                            {isSending
-                              ? <ActivityIndicator color="#fff" size="small" />
-                              : <Text style={styles.addBtnText}>{alreadySent ? 'Sent' : 'Add'}</Text>
-                            }
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-                {searchQuery.length > 1 && !searchLoading && searchResults.length === 0 && (
-                  <Text style={styles.noResults}>No users found for "{searchQuery}"</Text>
-                )}
-              </View>
             </>
           ) : (
-            <>
-              {/* ── School tab ── */}
-              {mySchool ? (
+            <View style={styles.addSection}>
+              {verifyFlow === null ? (
+                // ── Search ──────────────────────────────────────────────
                 <>
-                  {/* School header */}
-                  <View style={styles.schoolHeader}>
-                    <View style={styles.schoolInfo}>
-                      <Ionicons name="school-outline" size={16} color={C.accent2} />
-                      <Text style={styles.schoolName}>{mySchool.name}</Text>
-                    </View>
-                    <TouchableOpacity onPress={handleLeaveSchool} activeOpacity={0.75}>
-                      <Text style={styles.leaveText}>Leave</Text>
-                    </TouchableOpacity>
+                  <Text style={styles.cardTitle}>Join Your School</Text>
+                  <Text style={styles.addHint}>
+                    Compete on a leaderboard with everyone at your university.
+                  </Text>
+                  <View style={styles.searchRow}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Search for your school..."
+                      placeholderTextColor={colors.textMuted}
+                      value={schoolSearch}
+                      onChangeText={setSchoolSearch}
+                      autoCapitalize="words"
+                    />
+                    {schoolSearchLoading && (
+                      <ActivityIndicator color={colors.accentPrimary} style={styles.inlineSpinner} />
+                    )}
                   </View>
-
-                  {/* School leaderboard */}
-                  {schoolLoading ? (
-                    <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />
-                  ) : schoolFriends.length === 0 ? (
-                    <View style={styles.emptyState}>
-                      <Text style={styles.emptyTitle}>Just you so far</Text>
-                      <Text style={styles.emptySub}>Share the app with classmates to build the leaderboard.</Text>
+                  {schoolResults.length > 0 && (
+                    <View style={styles.resultsList}>
+                      {schoolResults.map((s) => (
+                        <View key={s.id} style={styles.resultRow}>
+                          <Ionicons name="school-outline" size={iconSizes.md} color={colors.accentSecondary} />
+                          <Text style={[styles.rowName, { flex: 1 }]}>{s.name}</Text>
+                          <PrimaryButton
+                            title="Join"
+                            onPress={() => handleJoinSchool(s)}
+                            disabled={joiningSchool !== null}
+                            loading={joiningSchool === s.id}
+                            compact
+                          />
+                        </View>
+                      ))}
                     </View>
-                  ) : (
-                    schoolFriends.map((f, i) => (
-                      <FriendRow
-                        key={f.id}
-                        f={f}
-                        rank={i + 1}
-                        maxMins={schoolFriends[0]?.weeklyMins ?? 1}
-                        gapToNext={i > 0 ? schoolFriends[i - 1].weeklyMins - f.weeklyMins : null}
-                      />
-                    ))
+                  )}
+                  {schoolSearch.length > 1 && !schoolSearchLoading && schoolResults.length === 0 && (
+                    <View style={styles.noSchoolWrap}>
+                      <Text style={styles.noResults}>No schools found for "{schoolSearch}"</Text>
+                      <Text style={styles.noSchoolSub}>
+                        Don't see your school? We're adding more — check back soon.
+                      </Text>
+                    </View>
                   )}
                 </>
+              ) : verifyFlow.step === 'email' ? (
+                // ── Enter school email ───────────────────────────────────
+                <>
+                  <TouchableOpacity onPress={() => setVerifyFlow(null)} style={styles.verifyBack} activeOpacity={0.75}>
+                    <Ionicons name="arrow-back" size={iconSizes.sm} color={colors.textMuted} />
+                    <Text style={styles.verifyBackText}>Back</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.cardTitle}>Verify School Email</Text>
+                  <Text style={styles.addHint}>
+                    Enter your {verifyFlow.school.name} email to confirm enrollment.
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={`you@${verifyFlow.school.domain}`}
+                    placeholderTextColor={colors.textMuted}
+                    value={verifyEmail}
+                    onChangeText={setVerifyEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoCorrect={false}
+                    autoFocus
+                  />
+                  {verifyError ? <Text style={styles.verifyErrorText}>{verifyError}</Text> : null}
+                  <PrimaryButton
+                    title="Send Code"
+                    onPress={handleSendCode}
+                    disabled={verifyLoading}
+                    loading={verifyLoading}
+                    style={styles.verifyBtn}
+                  />
+                </>
               ) : (
-                <View style={styles.addCard}>
-                  {verifyFlow === null ? (
-                    // ── Search ──────────────────────────────────────────────
-                    <>
-                      <Text style={styles.addTitle}>Join Your School</Text>
-                      <Text style={styles.addYourUsername}>
-                        Compete on a leaderboard with everyone at your university.
-                      </Text>
-                      <View style={styles.addRow}>
-                        <TextInput
-                          style={styles.input}
-                          placeholder="Search for your school..."
-                          placeholderTextColor={C.text3}
-                          value={schoolSearch}
-                          onChangeText={setSchoolSearch}
-                          autoCapitalize="words"
-                        />
-                        {schoolSearchLoading && (
-                          <ActivityIndicator color={C.accent} style={{ marginLeft: 8 }} />
-                        )}
-                      </View>
-                      {schoolResults.length > 0 && (
-                        <View style={styles.searchResults}>
-                          {schoolResults.map((s) => (
-                            <View key={s.id} style={styles.searchRow}>
-                              <Ionicons name="school-outline" size={18} color={C.accent2} style={{ marginRight: 2 }} />
-                              <Text style={[styles.searchName, { flex: 1 }]}>{s.name}</Text>
-                              <TouchableOpacity
-                                style={[styles.addBtn, joiningSchool === s.id && styles.addBtnSent]}
-                                onPress={() => handleJoinSchool(s)}
-                                disabled={joiningSchool !== null}
-                                activeOpacity={0.8}
-                              >
-                                {joiningSchool === s.id
-                                  ? <ActivityIndicator color="#fff" size="small" />
-                                  : <Text style={styles.addBtnText}>Join</Text>
-                                }
-                              </TouchableOpacity>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                      {schoolSearch.length > 1 && !schoolSearchLoading && schoolResults.length === 0 && (
-                        <View style={styles.noSchoolWrap}>
-                          <Text style={styles.noResults}>No schools found for "{schoolSearch}"</Text>
-                          <Text style={styles.noSchoolSub}>
-                            Don't see your school? We're adding more — check back soon.
-                          </Text>
-                        </View>
-                      )}
-                    </>
-                  ) : verifyFlow.step === 'email' ? (
-                    // ── Enter school email ───────────────────────────────────
-                    <>
-                      <TouchableOpacity onPress={() => setVerifyFlow(null)} style={styles.verifyBack}>
-                        <Ionicons name="arrow-back" size={15} color={C.text3} />
-                        <Text style={styles.verifyBackText}>Back</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.addTitle}>Verify School Email</Text>
-                      <Text style={styles.addYourUsername}>
-                        Enter your {verifyFlow.school.name} email to confirm enrollment.
-                      </Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder={`you@${verifyFlow.school.domain}`}
-                        placeholderTextColor={C.text3}
-                        value={verifyEmail}
-                        onChangeText={setVerifyEmail}
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        autoCorrect={false}
-                        autoFocus
-                      />
-                      {verifyError ? <Text style={styles.verifyErrorText}>{verifyError}</Text> : null}
-                      <TouchableOpacity
-                        style={[styles.addBtn, styles.verifyBtn, verifyLoading && styles.addBtnSent]}
-                        onPress={handleSendCode}
-                        disabled={verifyLoading}
-                        activeOpacity={0.8}
-                      >
-                        {verifyLoading
-                          ? <ActivityIndicator color="#fff" size="small" />
-                          : <Text style={styles.addBtnText}>Send Code</Text>
-                        }
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    // ── Enter OTP ────────────────────────────────────────────
-                    <>
-                      <TouchableOpacity
-                        onPress={() => setVerifyFlow({ step: 'email', school: verifyFlow.school })}
-                        style={styles.verifyBack}
-                      >
-                        <Ionicons name="arrow-back" size={15} color={C.text3} />
-                        <Text style={styles.verifyBackText}>Back</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.addTitle}>Enter the Code</Text>
-                      <Text style={styles.addYourUsername}>
-                        We sent a 6-digit code to {verifyFlow.schoolEmail}.
-                      </Text>
-                      <TextInput
-                        style={[styles.input, styles.otpInput]}
-                        placeholder="000000"
-                        placeholderTextColor={C.text3}
-                        value={verifyCode}
-                        onChangeText={(t) => setVerifyCode(t.replace(/\D/g, '').slice(0, 6))}
-                        keyboardType="number-pad"
-                        maxLength={6}
-                        autoFocus
-                      />
-                      {verifyError ? <Text style={styles.verifyErrorText}>{verifyError}</Text> : null}
-                      <TouchableOpacity
-                        style={[styles.addBtn, styles.verifyBtn, (verifyLoading || verifyCode.length < 6) && styles.addBtnSent]}
-                        onPress={handleVerifyCode}
-                        disabled={verifyLoading || verifyCode.length < 6}
-                        activeOpacity={0.8}
-                      >
-                        {verifyLoading
-                          ? <ActivityIndicator color="#fff" size="small" />
-                          : <Text style={styles.addBtnText}>Verify & Join</Text>
-                        }
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={{ alignSelf: 'center', paddingVertical: 4 }}
-                        onPress={async () => {
-                          if (verifyFlow?.step !== 'otp') return;
-                          setVerifyLoading(true);
-                          setVerifyError('');
-                          const r = await sendSchoolVerificationOtp(verifyFlow.schoolEmail);
-                          setVerifyLoading(false);
-                          if (!r.success) setVerifyError(r.message);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.verifyBackText}>Resend code</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
+                // ── Enter OTP ────────────────────────────────────────────
+                <>
+                  <TouchableOpacity
+                    onPress={() => setVerifyFlow({ step: 'email', school: verifyFlow.school })}
+                    style={styles.verifyBack}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons name="arrow-back" size={iconSizes.sm} color={colors.textMuted} />
+                    <Text style={styles.verifyBackText}>Back</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.cardTitle}>Enter the Code</Text>
+                  <Text style={styles.addHint}>
+                    We sent a 6-digit code to {verifyFlow.schoolEmail}.
+                  </Text>
+                  <TextInput
+                    style={[styles.input, styles.otpInput]}
+                    placeholder="000000"
+                    placeholderTextColor={colors.textMuted}
+                    value={verifyCode}
+                    onChangeText={(t) => setVerifyCode(t.replace(/\D/g, '').slice(0, 6))}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoFocus
+                  />
+                  {verifyError ? <Text style={styles.verifyErrorText}>{verifyError}</Text> : null}
+                  <PrimaryButton
+                    title="Verify & Join"
+                    onPress={handleVerifyCode}
+                    disabled={verifyLoading || verifyCode.length < 6}
+                    loading={verifyLoading}
+                    style={styles.verifyBtn}
+                  />
+                  <TouchableOpacity
+                    style={styles.resendBtn}
+                    onPress={async () => {
+                      if (verifyFlow?.step !== 'otp') return;
+                      setVerifyLoading(true);
+                      setVerifyError('');
+                      const r = await sendSchoolVerificationOtp(verifyFlow.schoolEmail);
+                      setVerifyLoading(false);
+                      if (!r.success) setVerifyError(r.message);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.verifyBackText}>Resend code</Text>
+                  </TouchableOpacity>
+                </>
               )}
-            </>
+            </View>
+          )}
+        </>
+      ) : (
+        <>
+          {/* ── Pending group invites ── */}
+          {groupInvites.length > 0 && (
+            <View style={styles.pendingCard}>
+              <Text style={styles.cardTitle}>Group Invites</Text>
+              {groupInvites.map((inv) => (
+                <View key={inv.group_id} style={styles.pendingRow}>
+                  <View style={styles.inviteIcon}>
+                    <Ionicons name="people" size={iconSizes.sm} color={colors.textSecondary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rowName}>{inv.group_name}</Text>
+                    {inv.invited_by_name && (
+                      <Text style={styles.rowMeta}>from {inv.invited_by_name}</Text>
+                    )}
+                  </View>
+                  <PrimaryButton
+                    title="Join"
+                    onPress={async () => {
+                      const r = await acceptInvite(inv.group_id);
+                      if (r.success) loadGroups();
+                      else Alert.alert('Error', r.message);
+                    }}
+                    compact
+                  />
+                  <IconButton
+                    icon="close"
+                    onPress={async () => {
+                      const r = await declineInvite(inv.group_id);
+                      if (r.success) loadGroups();
+                      else Alert.alert('Error', r.message);
+                    }}
+                    size="sm"
+                    color={colors.textMuted}
+                    accessibilityLabel="Decline group invite"
+                  />
+                </View>
+              ))}
+            </View>
           )}
 
-        </ScrollView>
-      </SafeAreaView>
-    </Animated.View>
+          {/* ── My groups list ── */}
+          {groups.map((g) => (
+            <TouchableOpacity
+              key={g.id}
+              style={styles.groupRow}
+              onPress={() => router.push(`/groups/${g.id}` as any)}
+              activeOpacity={0.75}
+            >
+              <View style={styles.groupIcon}>
+                <Ionicons name="people" size={iconSizes.md} color={colors.accentPrimary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowName}>{g.name}</Text>
+                {g.my_role === 'admin' && (
+                  <Text style={styles.rowMeta}>Admin</Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={iconSizes.sm} color={colors.textMuted} />
+            </TouchableOpacity>
+          ))}
+
+          {groups.length === 0 && groupInvites.length === 0 && (
+            <EmptyState
+              icon="people-outline"
+              title="No groups yet"
+              subtitle="Create one or join with an invite code."
+            />
+          )}
+
+          {/* ── Create / Join ── */}
+          <View style={styles.addSection}>
+            <TouchableOpacity
+              style={styles.createGroupBtn}
+              onPress={() => router.push('/groups/new' as any)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle-outline" size={iconSizes.md} color={colors.accentPrimary} />
+              <Text style={styles.createGroupText}>Create a Group</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.cardTitle}>Join with Code</Text>
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter invite code"
+                placeholderTextColor={colors.textMuted}
+                value={joinCode}
+                onChangeText={(t) => setJoinCode(t.toUpperCase())}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              <PrimaryButton
+                title="Join"
+                onPress={async () => {
+                  if (!joinCode.trim() || joiningByCode) return;
+                  setJoiningByCode(true);
+                  const r = await joinByInviteCode(joinCode);
+                  setJoiningByCode(false);
+                  if (r.success && r.groupId) {
+                    setJoinCode('');
+                    loadGroups();
+                    router.push(`/groups/${r.groupId}` as any);
+                  } else {
+                    Alert.alert('Could not join', r.message);
+                  }
+                }}
+                disabled={!joinCode.trim() || joiningByCode}
+                loading={joiningByCode}
+                compact
+                style={styles.joinCodeBtn}
+              />
+            </View>
+          </View>
+        </>
+      )}
+
+      <Modal
+        visible={showAddFriend}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddFriend(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalKeyboardView}
+        >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPressOut={() => setShowAddFriend(false)}>
+          <View style={[styles.modalCard, { paddingTop: insets.top + spacing.lg }]} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.cardTitle}>Add a Friend</Text>
+              <IconButton
+                icon="close"
+                onPress={() => setShowAddFriend(false)}
+                size="sm"
+                color={colors.textMuted}
+                accessibilityLabel="Close"
+              />
+            </View>
+            {(profile?.username || profile?.display_name) && (
+              <Text style={styles.addHint}>
+                Your username: <Text style={{ color: INVITE_TINT }}>@{profile.username || profile.display_name}</Text>
+              </Text>
+            )}
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.input}
+                placeholder="Search by username or name"
+                placeholderTextColor={colors.textMuted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchLoading && (
+                <ActivityIndicator color={INVITE_TINT} style={styles.inlineSpinner} />
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.inviteOption, addFriendNoResults && styles.inviteOptionHighlight]}
+              onPress={() => Share.share({ message: 'Are you Lokt in? Download and find out.' })}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="share-social-outline"
+                size={16}
+                color={addFriendNoResults ? colors.textOnAccent : INVITE_TINT}
+              />
+              <Text style={[styles.inviteOptionText, addFriendNoResults && styles.inviteOptionTextHighlight]}>
+                {addFriendNoResults
+                  ? `Can't find "${searchQuery.trim()}"? Invite them to Lokt`
+                  : "Invite a friend who isn't on Lokt yet"}
+              </Text>
+            </TouchableOpacity>
+
+            <ScrollView style={styles.modalResults} contentContainerStyle={styles.modalResultsContent} keyboardShouldPersistTaps="handled">
+              {searchResults.map((r) => {
+                const alreadySent = sentTo.has(r.id);
+                const isSending = sendingTo === r.id;
+                return (
+                  <View key={r.id} style={styles.resultRow}>
+                    <Avatar name={r.display_name ?? ''} userId={r.id} size={36} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowName}>{r.display_name}</Text>
+                      {r.username && <Text style={styles.rowMeta}>@{r.username}</Text>}
+                    </View>
+                    <PrimaryButton
+                      title={alreadySent ? 'Sent' : 'Add'}
+                      onPress={() => handleSendRequest(r.id)}
+                      disabled={alreadySent || isSending}
+                      loading={isSending}
+                      color={alreadySent ? colors.surfaceActive : INVITE_TINT}
+                      compact
+                    />
+                  </View>
+                );
+              })}
+              {addFriendNoResults && (
+                <Text style={styles.noResults}>No users found for "{searchQuery}"</Text>
+              )}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
+    </AppScreen>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
-  scroll: { flex: 1 },
-  content: { padding: 20, paddingBottom: 48 },
+  headerActions: { flexDirection: 'row', gap: spacing.sm },
+  segmentWrap: { marginBottom: spacing.xl },
 
-  title: {
-    fontWeight: '700',
-    fontSize: 32,
-    color: C.text1,
-    marginBottom: 14,
+  invitePromo: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: INVITE_TINT + '12', borderRadius: radii.lg,
+    borderWidth: 1, borderColor: INVITE_TINT + '33',
+    padding: spacing.md, marginBottom: spacing.lg,
   },
+  invitePromoIcon: {
+    width: 44, height: 44, borderRadius: radii.full,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  invitePromoTitle: { fontWeight: '700', fontSize: 13, color: colors.textPrimary, marginBottom: 2 },
+  invitePromoSub: { ...type.meta },
 
-  // Tab switcher
-  tabRow: {
+  cardTitle: { fontWeight: '600', fontSize: 16, color: colors.textPrimary, marginBottom: spacing.xs },
+  addHint: { ...type.meta },
+
+  // Pending requests / group invites
+  pendingCard: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  pendingRow: {
     flexDirection: 'row',
-    backgroundColor: C.surface2,
-    borderRadius: 12,
-    padding: 3,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 9,
     alignItems: 'center',
+    gap: spacing.sm,
   },
-  tabActive: { backgroundColor: C.surface3 },
-  tabText: { fontWeight: '500', fontSize: 14, color: C.text3 },
-  tabTextActive: { color: C.text1 },
+  inviteIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.full,
+    backgroundColor: colors.surfaceSunken,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowName: { ...type.name },
+  rowMeta: { ...type.meta, marginTop: 1 },
+
+  // Studying together banner
+  togetherCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.accentPrimary + '28',
+    overflow: 'hidden',
+  },
+  togetherCardBg: { borderRadius: radii.lg, backgroundColor: colors.accentSecondary },
+  togetherAvatarStack: { flexDirection: 'row', alignItems: 'center' },
+  togetherAvatarRing: {
+    borderRadius: radii.full,
+    borderWidth: 2,
+    borderColor: colors.surfaceRaised,
+  },
+  togetherName: { fontWeight: '600', fontSize: 13, color: colors.textPrimary, marginBottom: 1 },
+  togetherSub: { ...type.meta },
+  togetherLive: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  togetherLiveText: { fontWeight: '600', fontSize: 9, color: colors.accentSecondary, letterSpacing: 0.8 },
+  liveDot: { width: 5, height: 5, borderRadius: 2.5 },
+
+  // Leaderboard surface (friends + school)
+  leaderboardSurface: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    marginBottom: spacing.xl,
+  },
+
+  // Add friend / join school / join group
+  addSection: { gap: spacing.md, marginTop: spacing.xs },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  input: {
+    flex: 1,
+    height: 48,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    fontWeight: '400',
+    fontSize: 14,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  inlineSpinner: { marginLeft: spacing.sm },
+  resultsList: { gap: spacing.sm },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
+    padding: spacing.sm,
+  },
+  noResults: {
+    ...type.meta,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
+  noSchoolWrap: { gap: spacing.xs },
+  noSchoolSub: { ...type.meta, textAlign: 'center' },
 
   // School
   schoolHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
-    paddingHorizontal: 2,
+    marginBottom: spacing.lg,
   },
-  schoolInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  schoolName: {
-    fontWeight: '600',
-    fontSize: 15,
-    color: C.text1,
-  },
-  leaveText: {
-    fontWeight: '500',
-    fontSize: 13,
-    color: C.text3,
-  },
-  createSchoolBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-  },
-  createSchoolText: {
-    fontWeight: '500',
-    fontSize: 14,
-    color: C.accent,
-  },
+  schoolInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  schoolName: { ...type.name },
+  leaveText: { fontWeight: '500', fontSize: 13, color: colors.textMuted },
 
-  // Pending requests
-  pendingCard: {
-    backgroundColor: C.surface1,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  pendingTitle: {
-    fontWeight: '600',
-    fontSize: 14,
-    color: C.text1,
-  },
-  pendingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  pendingAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: C.surface3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendingInitials: {
-    fontWeight: '600',
-    fontSize: 12,
-    color: C.text2,
-  },
-  pendingName: {
-    fontWeight: '500',
-    fontSize: 14,
-    color: C.text1,
-  },
-  pendingUsername: {
-    fontWeight: '400',
-    fontSize: 11,
-    color: C.text3,
-  },
-  acceptBtn: {
-    backgroundColor: C.accent,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  acceptBtnText: {
-    fontWeight: '600',
-    fontSize: 13,
-    color: '#fff',
-  },
-  declineBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: C.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Studying together
-  togetherCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.surface1,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: C.accent + '30',
-    overflow: 'hidden',
-  },
-  togetherCardBg: { borderRadius: 16, backgroundColor: C.accent2 },
-  togetherAvatarStack: { flexDirection: 'row', alignItems: 'center' },
-  togetherAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  togetherInitials: { fontWeight: '600', fontSize: 11 },
-  togetherName: { fontWeight: '600', fontSize: 13, color: C.text1, marginBottom: 1 },
-  togetherSub: { fontWeight: '400', fontSize: 11, color: C.text3 },
-  togetherLive: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  togetherLiveText: {
-    fontWeight: '600',
-    fontSize: 9,
-    color: C.accent2,
-    letterSpacing: 0.8,
-  },
-
-  // Empty state
-  emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyTitle: { fontWeight: '600', fontSize: 16, color: C.text2, marginBottom: 6 },
-  emptySub: { fontWeight: '400', fontSize: 13, color: C.text3, textAlign: 'center' },
-
-  // Leaderboard rows
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.surface1,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 10,
-    overflow: 'hidden',
-  },
-  rowMe: {
-    backgroundColor: C.surface2,
-    borderColor: C.accent + '40',
-    shadowColor: C.accent,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  rowFirst: {
-    borderColor: 'rgba(212,184,64,0.30)',
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    elevation: 4,
-  },
-  goldOverlay: { borderRadius: 16, backgroundColor: GOLD },
-  rankCol: { width: 34, alignItems: 'center' },
-  rank: { fontWeight: '600', fontSize: 15, color: C.text2, textAlign: 'center' },
-  rankFirst: { fontSize: 18, color: GOLD },
-  avatarWrap: { width: 44, height: 44 },
-  avatarGlow: {
-    position: 'absolute',
-    top: -3, left: -3, right: -3, bottom: -3,
-    borderRadius: 25,
-    borderWidth: 2,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initials: { fontWeight: '600', fontSize: 14 },
-  info: { flex: 1 },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 6,
-  },
-  name: { fontWeight: '600', fontSize: 15, color: C.text1 },
-  nameMe: { color: C.accent },
-  leaderBadge: {
-    backgroundColor: 'rgba(212,184,64,0.12)',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(212,184,64,0.28)',
-  },
-  leaderText: { fontWeight: '600', fontSize: 8, color: GOLD, letterSpacing: 0.8 },
-  liveChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: C.red + '22',
-    borderRadius: 20,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  liveDot: { width: 6, height: 6, borderRadius: 3 },
-  liveText: { fontWeight: '500', fontSize: 10, color: C.red },
-  progressTrack: {
-    height: 4,
-    backgroundColor: C.surface3,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  progressFill: { height: '100%', borderRadius: 2 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  gapText: { fontWeight: '500', fontSize: 10, color: C.text3 },
-  gapTextMe: { color: C.accent },
-  duration: { fontFamily: 'DMMono-Medium', fontSize: 13, color: C.text2 },
-  durationMe: { color: C.accent },
-
-  // Add friend
-  addCard: {
-    backgroundColor: C.surface1,
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 12,
-  },
-  addTitle: { fontWeight: '600', fontSize: 16, color: C.text1 },
-  addYourUsername: { fontWeight: '400', fontSize: 12, color: C.text3 },
-  addRow: { flexDirection: 'row', alignItems: 'center' },
-  input: {
-    flex: 1,
-    backgroundColor: C.surface2,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontWeight: '400',
-    fontSize: 14,
-    color: C.text1,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  searchResults: {
-    gap: 8,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: C.surface2,
-    borderRadius: 12,
-    padding: 10,
-  },
-  searchAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchInitials: { fontWeight: '600', fontSize: 12 },
-  searchName: { fontWeight: '500', fontSize: 14, color: C.text1 },
-  searchUsername: { fontWeight: '400', fontSize: 11, color: C.text3 },
-  addBtn: {
-    backgroundColor: C.accent,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    minWidth: 52,
-    alignItems: 'center',
-  },
-  addBtnSent: { backgroundColor: C.surface3 },
-  addBtnText: { fontWeight: '600', fontSize: 13, color: '#fff' },
-  noResults: {
-    fontWeight: '400',
-    fontSize: 13,
-    color: C.text3,
-    textAlign: 'center',
-    paddingVertical: 8,
-  },
-
-  verifyBack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  verifyBackText: {
-    fontWeight: '500',
-    fontSize: 13,
-    color: C.text3,
-  },
-  verifyBtn: {
-    alignSelf: 'stretch',
-    height: 44,
-    borderRadius: 11,
-    justifyContent: 'center',
-    minWidth: 0,
-  },
-  verifyErrorText: {
-    fontWeight: '400',
-    fontSize: 12,
-    color: C.red,
-  },
+  verifyBack: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
+  verifyBackText: { fontWeight: '500', fontSize: 13, color: colors.textMuted },
+  verifyBtn: { alignSelf: 'stretch' },
+  verifyErrorText: { fontWeight: '400', fontSize: 12, color: colors.destructive },
+  resendBtn: { alignSelf: 'center', paddingVertical: spacing.xs },
   otpInput: {
     textAlign: 'center',
     fontFamily: 'DMMono-Medium',
     fontSize: 22,
     letterSpacing: 8,
   },
+
+  // Groups tab
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  groupIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    backgroundColor: colors.accentPrimary + '22',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createGroupBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  createGroupText: { fontWeight: '600', fontSize: 15, color: colors.accentPrimary },
+  joinCodeBtn: { minWidth: 64 },
+
+  // Add Friend modal — anchored to the top of the screen so the keyboard
+  // (which rises from the bottom) never covers it.
+  modalKeyboardView: { flex: 1 },
+  modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-start' },
+  modalCard: {
+    backgroundColor: colors.surfaceRaised, borderBottomLeftRadius: radii.lg, borderBottomRightRadius: radii.lg,
+    padding: spacing.xl, gap: spacing.md, maxHeight: '80%',
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  modalResults: { maxHeight: 360 },
+  modalResultsContent: { gap: spacing.sm },
+
+  inviteOption: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: radii.md, borderWidth: 1,
+    borderColor: INVITE_TINT + '33', backgroundColor: INVITE_TINT + '12',
+  },
+  inviteOptionHighlight: {
+    backgroundColor: INVITE_TINT, borderColor: INVITE_TINT,
+    ...shadows.tinted(INVITE_TINT),
+  },
+  inviteOptionText: { fontWeight: '600', fontSize: 13, color: INVITE_TINT, flex: 1 },
+  inviteOptionTextHighlight: { color: colors.textOnAccent },
 });

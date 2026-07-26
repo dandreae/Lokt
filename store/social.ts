@@ -1,4 +1,5 @@
 import { supabase, getUserId } from '../utils/supabase';
+import { PREVIEW, PREVIEW_LEADERBOARD } from '../utils/previewData';
 
 export type LeaderboardEntry = {
   user_id: string;
@@ -19,6 +20,7 @@ export type PendingRequest = {
 export type UserProfile = {
   display_name: string;
   username: string | null;
+  avatar_color: string | null;
 };
 
 export type School = {
@@ -34,6 +36,7 @@ export type SearchResult = {
 };
 
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  if (PREVIEW) return [...PREVIEW_LEADERBOARD];
   const userId = await getUserId();
   if (!userId) return [];
 
@@ -138,13 +141,69 @@ export async function getMyProfile(): Promise<UserProfile | null> {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
-    .select('display_name, username')
+    .select('display_name, username, avatar_color')
     .eq('id', userId)
     .maybeSingle();
 
+  // avatar_color may not exist yet if that migration hasn't been applied —
+  // fall back to the columns that have always existed rather than failing
+  // the whole profile fetch over one missing column.
+  if (error) {
+    const { data: fallback } = await supabase
+      .from('profiles')
+      .select('display_name, username')
+      .eq('id', userId)
+      .maybeSingle();
+    return fallback ? { ...fallback, avatar_color: null } : null;
+  }
+
   return data ?? null;
+}
+
+// Read-only existence check used for live "is this username available"
+// feedback while typing — updateUsername() below still does the real
+// write and is the source of truth (DB unique constraint wins any race).
+export async function isUsernameAvailable(username: string): Promise<boolean> {
+  const clean = username.toLowerCase().trim().replace(/[^a-z0-9_.]/g, '');
+  if (clean.length < 3) return false;
+
+  const userId = await getUserId();
+  let query = supabase.from('profiles').select('id').eq('username', clean).limit(1);
+  if (userId) query = query.neq('id', userId);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) { console.error('isUsernameAvailable error:', error.message); return false; }
+  return !data;
+}
+
+export async function updateAvatarColor(color: string): Promise<{ success: boolean; message: string }> {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Not logged in.' };
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ avatar_color: color })
+    .eq('id', userId);
+
+  if (error) return { success: false, message: error.message };
+  return { success: true, message: 'Avatar updated!' };
+}
+
+// Contact info only — not used for authentication (no SMS/phone-auth
+// provider is configured on this project).
+export async function updatePhone(phone: string): Promise<{ success: boolean; message: string }> {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Not logged in.' };
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ phone: phone.trim() || null })
+    .eq('id', userId);
+
+  if (error) return { success: false, message: error.message };
+  return { success: true, message: 'Phone saved!' };
 }
 
 export async function updateDisplayName(name: string): Promise<{ success: boolean; message: string }> {

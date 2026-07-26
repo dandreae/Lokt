@@ -1,5 +1,6 @@
 import { supabase, getUserId } from '../utils/supabase';
 import type { Session } from '../types';
+import { PREVIEW, PREVIEW_SESSIONS } from '../utils/previewData';
 
 // Converts a raw Supabase row into the Session shape the rest of the app uses.
 // The main differences:
@@ -17,6 +18,7 @@ function rowToSession(row: any): Session {
 }
 
 export async function getSessions(): Promise<Session[]> {
+  if (PREVIEW) return [...PREVIEW_SESSIONS];
   const userId = await getUserId();
   if (!userId) return [];
 
@@ -32,11 +34,11 @@ export async function getSessions(): Promise<Session[]> {
 
 // created_at is passed explicitly so it reflects when the session happened,
 // not when the INSERT runs (the two can differ if the user is offline or slow).
-export async function saveSession(session: Session): Promise<void> {
+export async function saveSession(session: Session): Promise<{ success: boolean; message: string }> {
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId) return { success: false, message: 'Not logged in.' };
 
-  await supabase.from('sessions').insert({
+  const { error } = await supabase.from('sessions').insert({
     id: session.id,
     user_id: userId,
     task_id: session.subjectId || null,
@@ -44,6 +46,12 @@ export async function saveSession(session: Session): Promise<void> {
     note: session.note,
     created_at: new Date(session.ts).toISOString(),
   });
+
+  if (error) {
+    console.error('saveSession error:', error.message, error.details, error.hint);
+    return { success: false, message: error.message };
+  }
+  return { success: true, message: 'Saved!' };
 }
 
 // user_id is included in the filter as a safety net alongside RLS.
@@ -51,11 +59,13 @@ export async function deleteSession(id: string): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
 
-  await supabase
+  const { error } = await supabase
     .from('sessions')
     .delete()
     .eq('id', id)
     .eq('user_id', userId);
+
+  if (error) console.error('deleteSession error:', error.message);
 }
 
 // Called before deleting a task so orphaned session records are cleaned up.
@@ -63,11 +73,13 @@ export async function deleteSessionsByTaskId(taskId: string): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
 
-  await supabase
+  const { error } = await supabase
     .from('sessions')
     .delete()
     .eq('task_id', taskId)
     .eq('user_id', userId);
+
+  if (error) console.error('deleteSessionsByTaskId error:', error.message);
 }
 
 // These two filter an already-loaded list of sessions in memory.
